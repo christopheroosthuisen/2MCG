@@ -5,6 +5,7 @@ import { Text, Button, Card, Badge, ProgressBar } from './components/UIComponent
 import { VideoRecorder, AnalysisToolbar, SkeletonOverlay, MetricCard, KeyframeMarker } from './components/AnalysisViews';
 import { LearnSystem } from './components/LearnViews';
 import { PracticeSystem } from './components/PracticeViews';
+import { TempoTool } from './components/TempoTool';
 
 // Icons as simple SVG components
 const Icons = {
@@ -26,7 +27,7 @@ const Icons = {
 
 const App: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<Tab>('HOME');
-    const [subScreen, setSubScreen] = useState<{ type: 'DRILL' | 'ANALYSIS_RESULT', id: string } | null>(null);
+    const [subScreen, setSubScreen] = useState<{ type: 'DRILL' | 'ANALYSIS_RESULT' | 'TOOL', id: string } | null>(null);
     const [isRecording, setIsRecording] = useState(false);
 
     // Navigation Helper
@@ -37,6 +38,7 @@ const App: React.FC = () => {
 
     const openDrill = (id: string) => setSubScreen({ type: 'DRILL', id });
     const openAnalysis = (id: string) => setSubScreen({ type: 'ANALYSIS_RESULT', id });
+    const openTempoTool = () => setSubScreen({ type: 'TOOL', id: 'TEMPO' });
     const goBack = () => setSubScreen(null);
 
     // --- SCREEN COMPONENTS ---
@@ -452,6 +454,7 @@ const App: React.FC = () => {
     if (subScreen) {
         if (subScreen.type === 'DRILL') return <DrillDetail drillId={subScreen.id} />;
         if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} />;
+        if (subScreen.type === 'TOOL' && subScreen.id === 'TEMPO') return <TempoTool onBack={goBack} />;
     }
 
     return (
@@ -459,7 +462,7 @@ const App: React.FC = () => {
             <main className="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-y-auto px-6 hide-scrollbar">
                     {currentTab === 'HOME' && <HomeView />}
-                    {currentTab === 'PRACTICE' && <PracticeSystem />}
+                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={openTempoTool} />}
                     {currentTab === 'LEARN' && <LearnSystem />}
                     {currentTab === 'ANALYZE' && (
                         <div className="flex flex-col items-center justify-center h-full text-center space-y-6 pb-20 animate-in fade-in duration-500">
@@ -494,18 +497,12 @@ const App: React.FC = () => {
                         icon={<Icons.Target />} 
                         label="Practice" 
                     />
-                    
-                    {/* Floating Center Button */}
-                    <div className="-mt-12 relative group">
-                        <div className="absolute inset-0 bg-orange-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                        <button 
-                            onClick={() => navigateTo('ANALYZE')}
-                            className="w-16 h-16 bg-[#FF8200] rounded-full shadow-lg shadow-orange-500/40 flex items-center justify-center text-white transform hover:scale-105 transition-all duration-200 relative z-10 border-4 border-gray-50"
-                        >
-                            <div className="transform scale-125"><Icons.Camera /></div>
-                        </button>
-                    </div>
-
+                    <NavButton 
+                        active={currentTab === 'ANALYZE'} 
+                        onClick={() => navigateTo('ANALYZE')} 
+                        icon={<Icons.Camera />} 
+                        label="Analyze" 
+                    />
                     <NavButton 
                         active={currentTab === 'LEARN'} 
                         onClick={() => navigateTo('LEARN')} 

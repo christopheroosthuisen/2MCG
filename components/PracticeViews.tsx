@@ -17,9 +17,10 @@ const Icons = {
     Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     Stop: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12"></rect></svg>,
     Minus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 };
 
-export const PracticeSystem: React.FC = () => {
+export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTempoTool }) => {
     const [activeTab, setActiveTab] = useState('DASHBOARD');
     const [isSessionActive, setIsSessionActive] = useState(false);
 
@@ -41,7 +42,7 @@ export const PracticeSystem: React.FC = () => {
                 />
             </div>
 
-            {activeTab === 'DASHBOARD' && <PracticeDashboard />}
+            {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} />}
             {activeTab === 'GOALS' && <GoalsView />}
             {activeTab === 'HISTORY' && <HistoryView />}
             {activeTab === 'SWINGS' && <SwingLibraryView />}
@@ -138,7 +139,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
 };
 
-const PracticeDashboard: React.FC = () => {
+const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTempoTool }) => {
     // Short Game Filtering State
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
 
@@ -185,6 +186,29 @@ const PracticeDashboard: React.FC = () => {
                         </Text>
                     </div>
                 </Card>
+            </section>
+            
+            {/* Tools Section (Tempo Trainer) */}
+            <section>
+                 <Text variant="h3" className="mb-4 px-1">Tools</Text>
+                 <Card 
+                    variant="outlined" 
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 group border-orange-100 bg-orange-50/30"
+                    onClick={onOpenTempoTool}
+                 >
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                             <Icons.Activity />
+                        </div>
+                        <div>
+                            <Text variant="h4" className="text-base font-bold">Tempo Trainer</Text>
+                            <Text variant="caption" className="text-xs">Perfect your swing rhythm</Text>
+                        </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:text-orange-500">
+                        <Icons.ChevronRight />
+                    </div>
+                 </Card>
             </section>
 
              {/* Short Game Lab (Enhanced with Filtering) */}
