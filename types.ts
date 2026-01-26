@@ -31,6 +31,41 @@ export interface SwingMetrics {
     rollDistance?: number; // Putting
 }
 
+// Data Import Types
+export type ImportSource = 'ARCCOS' | 'TANGENT' | 'TRACKMAN' | 'GCQUAD' | 'MANUAL';
+
+export interface StrokesGainedStats {
+    offTee: number;
+    approach: number;
+    aroundGreen: number;
+    putting: number;
+    total: number;
+    handicap: number;
+}
+
+export interface RecommendationEngine {
+    focusArea: 'DRIVING' | 'IRON_PLAY' | 'SHORT_GAME' | 'PUTTING';
+    recommendedDrills: string[]; // Drill IDs
+    recommendedCourseId?: string;
+    reasoning: string;
+}
+
+// Bag of Shots Types
+export type ShotLie = 'TEE' | 'FAIRWAY' | 'ROUGH' | 'BUNKER_FAIRWAY' | 'BUNKER_GREEN' | 'DIVOT';
+export type ShotTrajectory = 'LOW' | 'STANDARD' | 'HIGH';
+
+export interface BagShotSlot {
+    id: string;
+    title: string;
+    distanceRange: string; // e.g. "150-175y"
+    lie: ShotLie;
+    shape: ShotShape;
+    trajectory: ShotTrajectory;
+    isMastered: boolean;
+    videoUrl?: string; // Proof of mastery
+    masteryDate?: Date;
+}
+
 // User Profile Types
 
 export interface SwingDNA {
@@ -77,6 +112,13 @@ export interface Keyframe {
 export type ToolType = 'POINTER' | 'LINE' | 'ANGLE' | 'CIRCLE' | 'RECT' | 'FREEHAND' | 'GRID' | 'SKELETON';
 export type PlaybackSpeed = 0.1 | 0.25 | 0.5 | 1.0;
 
+export interface SkeletonConfig {
+    showArms: boolean;
+    showLegs: boolean;
+    showTorso: boolean;
+    showHead: boolean;
+}
+
 export interface DrawnAnnotation {
     id: string;
     type: ToolType;
@@ -92,6 +134,7 @@ export interface FeedbackMessage {
     severity: 'INFO' | 'WARNING' | 'CRITICAL';
     category: 'POSTURE' | 'GRIP' | 'TEMPO' | 'PLANE' | 'ROTATION';
     correction?: string; // Drill ID or text
+    audioUrl?: string; // Optional TTS override
 }
 
 export interface PoseLandmark {

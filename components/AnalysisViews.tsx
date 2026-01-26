@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Button, Text, Card, Badge, ProgressBar } from './UIComponents';
 import { COLORS } from '../constants';
-import { AnalysisStatus, FeedbackMessage, Keyframe, PlaybackSpeed, ToolType, SwingAnalysis } from '../types';
+import { AnalysisStatus, FeedbackMessage, Keyframe, PlaybackSpeed, ToolType, SwingAnalysis, SkeletonConfig } from '../types';
 import { analyzeSwingFrame } from '../services/geminiService';
 import { MOCK_RECENT_SWINGS } from '../constants';
 
@@ -15,7 +15,11 @@ const Icons = {
     Split: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>,
     Tag: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
     Maximize: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>,
-    Layers: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+    Layers: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>,
+    Volume2: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>,
+    VolumeX: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>,
+    Eye: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+    EyeOff: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
 };
 
 // --- VIDEO RECORDER (Existing) ---
@@ -176,7 +180,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
 };
 
 // --- PRO VIDEO PLAYER ---
-// This handles the rendering of the video and the drawing layer
+// This handles the rendering of the video, drawing layer, and configurable skeleton
 
 interface ProVideoPlayerProps {
     src: string;
@@ -190,13 +194,20 @@ interface ProVideoPlayerProps {
     currentTime: number;
     onSeek: (t: number) => void;
     showSkeleton: boolean;
+    skeletonConfig: SkeletonConfig;
+    toggleSkeletonConfig: (part: keyof SkeletonConfig) => void;
+    showSkeletonSettings: boolean;
+    setShowSkeletonSettings: (show: boolean) => void;
+    feedbackMessages: FeedbackMessage[];
 }
 
 export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({ 
-    src, overlay, tool, activeColor, playbackSpeed, isPlaying, onTogglePlay, duration, currentTime, onSeek, showSkeleton
+    src, overlay, tool, activeColor, playbackSpeed, isPlaying, onTogglePlay, duration, currentTime, onSeek, showSkeleton,
+    skeletonConfig, toggleSkeletonConfig, showSkeletonSettings, setShowSkeletonSettings, feedbackMessages
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [currentFeedback, setCurrentFeedback] = useState<FeedbackMessage | null>(null);
 
     // Sync React state with Video Element
     useEffect(() => {
@@ -211,6 +222,32 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
             videoRef.current.playbackRate = playbackSpeed;
         }
     }, [playbackSpeed]);
+
+    // Live Feedback Engine
+    useEffect(() => {
+        if (!isPlaying) {
+            setCurrentFeedback(null);
+            return;
+        }
+
+        // Find active feedback for current time window (within 0.5s)
+        const feedback = feedbackMessages.find(f => 
+            currentTime >= f.timestamp && currentTime < f.timestamp + 1.5
+        );
+
+        if (feedback && feedback.id !== currentFeedback?.id) {
+            setCurrentFeedback(feedback);
+            
+            // TTS Simulation
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(feedback.text);
+                utterance.rate = 1.2;
+                window.speechSynthesis.speak(utterance);
+            }
+        } else if (!feedback) {
+            setCurrentFeedback(null);
+        }
+    }, [currentTime, isPlaying, feedbackMessages]);
 
     return (
         <div className="relative w-full h-full bg-black flex items-center justify-center group">
@@ -233,16 +270,74 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
                 // In real app: handleMouseDown, handleMouseMove, etc. to draw
             />
 
-            {/* Skeleton Overlay (Simulated) */}
+            {/* Dynamic Feedback Overlay */}
+            {currentFeedback && (
+                <div className="absolute top-12 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in fade-in zoom-in duration-200">
+                    <div className={`px-4 py-2 rounded-full backdrop-blur-md shadow-lg border border-white/20 text-white font-bold text-sm max-w-[80%] text-center
+                        ${currentFeedback.severity === 'WARNING' ? 'bg-orange-500/80' : 'bg-blue-600/80'}
+                    `}>
+                        {currentFeedback.text}
+                    </div>
+                </div>
+            )}
+
+            {/* Configurable Skeleton Overlay */}
             {showSkeleton && (
                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-70" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <line x1="50" y1="20" x2="50" y2="50" stroke={COLORS.success} strokeWidth="0.5" strokeDasharray="2,1" />
-                    <line x1="40" y1="25" x2="60" y2="25" stroke={COLORS.primary} strokeWidth="0.5" />
-                    <line x1="45" y1="50" x2="55" y2="50" stroke={COLORS.primary} strokeWidth="0.5" />
-                    <line x1="45" y1="50" x2="42" y2="80" stroke="white" strokeWidth="0.5" />
-                    <line x1="55" y1="50" x2="58" y2="80" stroke="white" strokeWidth="0.5" />
-                    <circle cx="50" cy="15" r="5" stroke={COLORS.warning} strokeWidth="0.5" fill="none" />
+                    {/* Torso */}
+                    {skeletonConfig.showTorso && (
+                        <>
+                            <line x1="50" y1="20" x2="50" y2="50" stroke={COLORS.success} strokeWidth="0.5" strokeDasharray="2,1" />
+                            <line x1="40" y1="25" x2="60" y2="25" stroke={COLORS.primary} strokeWidth="0.5" />
+                            <line x1="45" y1="50" x2="55" y2="50" stroke={COLORS.primary} strokeWidth="0.5" />
+                        </>
+                    )}
+                    
+                    {/* Legs */}
+                    {skeletonConfig.showLegs && (
+                        <>
+                            <line x1="45" y1="50" x2="42" y2="80" stroke="white" strokeWidth="0.5" />
+                            <line x1="55" y1="50" x2="58" y2="80" stroke="white" strokeWidth="0.5" />
+                        </>
+                    )}
+
+                    {/* Arms (Simulated positions) */}
+                    {skeletonConfig.showArms && (
+                        <>
+                            <line x1="40" y1="25" x2="35" y2="45" stroke="cyan" strokeWidth="0.5" />
+                            <line x1="60" y1="25" x2="65" y2="45" stroke="cyan" strokeWidth="0.5" />
+                        </>
+                    )}
+
+                    {/* Head */}
+                    {skeletonConfig.showHead && (
+                        <circle cx="50" cy="15" r="5" stroke={COLORS.warning} strokeWidth="0.5" fill="none" />
+                    )}
                 </svg>
+            )}
+
+            {/* Skeleton Settings Menu */}
+            {showSkeletonSettings && (
+                <div className="absolute top-12 right-4 bg-gray-900/95 border border-gray-700 p-3 rounded-xl z-40 backdrop-blur-md w-40 animate-in fade-in slide-in-from-top-2">
+                    <Text variant="caption" className="font-bold uppercase mb-2 text-gray-400 text-[10px]">Joint Visibility</Text>
+                    <div className="space-y-1">
+                        {[
+                            { key: 'showHead', label: 'Head' },
+                            { key: 'showTorso', label: 'Torso' },
+                            { key: 'showArms', label: 'Arms' },
+                            { key: 'showLegs', label: 'Legs' }
+                        ].map((item) => (
+                            <button 
+                                key={item.key}
+                                onClick={() => toggleSkeletonConfig(item.key as keyof SkeletonConfig)}
+                                className="flex items-center justify-between w-full p-2 rounded hover:bg-gray-800 transition-colors text-xs text-white"
+                            >
+                                <span>{item.label}</span>
+                                {skeletonConfig[item.key as keyof SkeletonConfig] ? <Icons.Eye /> : <Icons.EyeOff />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             )}
 
             {/* Big Play Button Overlay */}
@@ -271,7 +366,8 @@ export const AnalysisToolbar: React.FC<{
     onSelectColor: (color: string) => void;
     showSkeleton: boolean;
     onToggleSkeleton: () => void;
-}> = ({ activeTool, onSelectTool, activeColor, onSelectColor, showSkeleton, onToggleSkeleton }) => {
+    onToggleSkeletonSettings: () => void;
+}> = ({ activeTool, onSelectTool, activeColor, onSelectColor, showSkeleton, onToggleSkeleton, onToggleSkeletonSettings }) => {
     const tools: {id: ToolType, icon: string, label: string}[] = [
         { id: 'POINTER', icon: '👆', label: 'Select' },
         { id: 'LINE', icon: '📏', label: 'Line' },
@@ -301,17 +397,25 @@ export const AnalysisToolbar: React.FC<{
                 
                 <div className="w-px h-8 bg-gray-700 mx-1"></div>
 
-                {/* Skeleton Toggle */}
-                <button 
-                    onClick={onToggleSkeleton}
-                    className={`flex flex-col items-center justify-center min-w-[48px] h-12 rounded-lg transition-all ${
-                        showSkeleton 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    }`}
-                >
-                     <Icons.Layers />
-                </button>
+                {/* Skeleton Toggle Group */}
+                <div className="flex bg-gray-800 rounded-lg p-0.5">
+                    <button 
+                        onClick={onToggleSkeleton}
+                        className={`flex flex-col items-center justify-center w-10 h-11 rounded-l-lg transition-all ${
+                            showSkeleton 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-transparent text-gray-400 hover:bg-gray-700'
+                        }`}
+                    >
+                         <Icons.Layers />
+                    </button>
+                    <button 
+                        onClick={onToggleSkeletonSettings}
+                        className="w-6 h-11 border-l border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded-r-lg"
+                    >
+                        <Icons.Settings />
+                    </button>
+                </div>
 
                 <div className="w-px h-8 bg-gray-700 mx-1"></div>
 
@@ -339,7 +443,9 @@ export const TransportControls: React.FC<{
     currentTime: number;
     duration: number;
     onSeek: (t: number) => void;
-}> = ({ isPlaying, onTogglePlay, speed, onSpeedChange, currentTime, duration, onSeek }) => {
+    audioEnabled: boolean;
+    toggleAudio: () => void;
+}> = ({ isPlaying, onTogglePlay, speed, onSpeedChange, currentTime, duration, onSeek, audioEnabled, toggleAudio }) => {
     
     // Format Time 00:00
     const formatTime = (t: number) => {
@@ -380,16 +486,25 @@ export const TransportControls: React.FC<{
             {/* Buttons */}
             <div className="flex items-center justify-between">
                 {/* Speed Controls */}
-                <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
-                    {[0.25, 0.5, 1.0].map((s) => (
-                        <button 
-                            key={s}
-                            onClick={() => onSpeedChange(s as PlaybackSpeed)}
-                            className={`px-2 py-1 text-[10px] font-bold rounded ${speed === s ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                        >
-                            {s}x
-                        </button>
-                    ))}
+                <div className="flex gap-4 items-center">
+                    <button 
+                        onClick={toggleAudio}
+                        className={`text-gray-400 hover:text-white ${audioEnabled ? 'text-blue-400' : ''}`}
+                    >
+                        {audioEnabled ? <Icons.Volume2 /> : <Icons.VolumeX />}
+                    </button>
+
+                    <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
+                        {[0.25, 0.5, 1.0].map((s) => (
+                            <button 
+                                key={s}
+                                onClick={() => onSpeedChange(s as PlaybackSpeed)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded ${speed === s ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                            >
+                                {s}x
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Transport */}
@@ -463,6 +578,20 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
     const [currentTime, setCurrentTime] = useState(0);
     const [splitScreen, setSplitScreen] = useState(false);
     const [showSkeleton, setShowSkeleton] = useState(false);
+    const [showSkeletonSettings, setShowSkeletonSettings] = useState(false);
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    
+    // Default skeleton showing all parts
+    const [skeletonConfig, setSkeletonConfig] = useState<SkeletonConfig>({
+        showArms: true,
+        showLegs: true,
+        showTorso: true,
+        showHead: true
+    });
+
+    const toggleSkeletonConfig = (part: keyof SkeletonConfig) => {
+        setSkeletonConfig(prev => ({ ...prev, [part]: !prev[part] }));
+    };
     
     // Mock Duration
     const duration = 3.5;
@@ -511,6 +640,11 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
                         currentTime={currentTime}
                         onSeek={setCurrentTime}
                         showSkeleton={showSkeleton}
+                        skeletonConfig={skeletonConfig}
+                        toggleSkeletonConfig={toggleSkeletonConfig}
+                        showSkeletonSettings={showSkeletonSettings}
+                        setShowSkeletonSettings={setShowSkeletonSettings}
+                        feedbackMessages={audioEnabled ? swing.feedback : []}
                     />
                 </div>
                 
@@ -531,6 +665,11 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
                             currentTime={currentTime} // Sync time
                             onSeek={() => {}} 
                             showSkeleton={showSkeleton}
+                            skeletonConfig={skeletonConfig}
+                            toggleSkeletonConfig={() => {}}
+                            showSkeletonSettings={false}
+                            setShowSkeletonSettings={() => {}}
+                            feedbackMessages={[]}
                         />
                     </div>
                 )}
@@ -545,6 +684,8 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
                 currentTime={currentTime}
                 duration={duration}
                 onSeek={setCurrentTime}
+                audioEnabled={audioEnabled}
+                toggleAudio={() => setAudioEnabled(!audioEnabled)}
             />
 
             {/* Annotation Tools */}
@@ -554,7 +695,11 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
                 activeColor={activeColor}
                 onSelectColor={setActiveColor}
                 showSkeleton={showSkeleton}
-                onToggleSkeleton={() => setShowSkeleton(!showSkeleton)}
+                onToggleSkeleton={() => {
+                    setShowSkeleton(!showSkeleton);
+                    if (showSkeleton) setShowSkeletonSettings(false);
+                }}
+                onToggleSkeletonSettings={() => setShowSkeletonSettings(!showSkeletonSettings)}
             />
 
             {/* Data Sheet / Tags */}

@@ -17,10 +17,11 @@ const Icons = {
     Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     Stop: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12"></rect></svg>,
     Minus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
-    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+    Grid: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
 };
 
-export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTempoTool }) => {
+export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void }> = ({ onOpenTempoTool, onOpenBagOfShots }) => {
     const [activeTab, setActiveTab] = useState('DASHBOARD');
     const [isSessionActive, setIsSessionActive] = useState(false);
 
@@ -42,7 +43,7 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void }> = ({ onOp
                 />
             </div>
 
-            {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} />}
+            {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} />}
             {activeTab === 'GOALS' && <GoalsView />}
             {activeTab === 'HISTORY' && <HistoryView />}
             {activeTab === 'SWINGS' && <SwingLibraryView />}
@@ -139,7 +140,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
 };
 
-const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTempoTool }) => {
+const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void }> = ({ onOpenTempoTool, onOpenBagOfShots }) => {
     // Short Game Filtering State
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
 
@@ -188,27 +189,50 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTe
                 </Card>
             </section>
             
-            {/* Tools Section (Tempo Trainer) */}
+            {/* Tools Section (Tempo Trainer & Bag of Shots) */}
             <section>
                  <Text variant="h3" className="mb-4 px-1">Tools</Text>
-                 <Card 
-                    variant="outlined" 
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 group border-orange-100 bg-orange-50/30"
-                    onClick={onOpenTempoTool}
-                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                             <Icons.Activity />
+                 <div className="grid grid-cols-1 gap-4">
+                    {/* Tempo Trainer Card */}
+                    <Card 
+                        variant="outlined" 
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 group border-orange-100 bg-orange-50/30"
+                        onClick={onOpenTempoTool}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Icons.Activity />
+                            </div>
+                            <div>
+                                <Text variant="h4" className="text-base font-bold">Tempo Trainer</Text>
+                                <Text variant="caption" className="text-xs">Perfect your swing rhythm</Text>
+                            </div>
                         </div>
-                        <div>
-                            <Text variant="h4" className="text-base font-bold">Tempo Trainer</Text>
-                            <Text variant="caption" className="text-xs">Perfect your swing rhythm</Text>
+                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:text-orange-500">
+                            <Icons.ChevronRight />
                         </div>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:text-orange-500">
-                        <Icons.ChevronRight />
-                    </div>
-                 </Card>
+                    </Card>
+
+                    {/* Bag of Shots Card */}
+                    <Card 
+                        variant="outlined" 
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 group border-gray-200"
+                        onClick={onOpenBagOfShots}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Icons.Grid />
+                            </div>
+                            <div>
+                                <Text variant="h4" className="text-base font-bold">Bag of Shots</Text>
+                                <Text variant="caption" className="text-xs">Your mastery library</Text>
+                            </div>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:text-gray-900">
+                            <Icons.ChevronRight />
+                        </div>
+                    </Card>
+                 </div>
             </section>
 
              {/* Short Game Lab (Enhanced with Filtering) */}
@@ -269,24 +293,6 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void }> = ({ onOpenTe
                         </div>
                     )}
                 </div>
-            </section>
-
-            {/* Quick Actions */}
-            <section className="grid grid-cols-2 gap-4">
-                <Card variant="outlined" className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-orange-200 hover:bg-orange-50 group transition-all">
-                    <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <Icons.Upload />
-                    </div>
-                    <Text variant="h4" className="text-base">Upload Data</Text>
-                    <Text variant="caption" className="text-xs mt-1">TrackMan / GCQuad</Text>
-                </Card>
-                <Card variant="outlined" className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-green-200 hover:bg-green-50 group transition-all">
-                    <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <Icons.TrendUp />
-                    </div>
-                    <Text variant="h4" className="text-base">AI Analysis</Text>
-                    <Text variant="caption" className="text-xs mt-1">Session Insights</Text>
-                </Card>
             </section>
 
             {/* Recent Sessions */}

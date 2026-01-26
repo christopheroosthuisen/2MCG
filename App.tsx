@@ -6,6 +6,8 @@ import { VideoRecorder, AnalysisToolbar, SkeletonOverlay, MetricCard, KeyframeMa
 import { LearnSystem } from './components/LearnViews';
 import { PracticeSystem } from './components/PracticeViews';
 import { TempoTool } from './components/TempoTool';
+import { DataUploadWizard } from './components/DataUploadWizard';
+import { BagOfShots } from './components/BagOfShots';
 
 // Icons as simple SVG components
 const Icons = {
@@ -22,13 +24,16 @@ const Icons = {
     Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
     Map: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>,
     Briefcase: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>,
-    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+    Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+    TrendUp: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
 };
 
 const App: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<Tab>('HOME');
-    const [subScreen, setSubScreen] = useState<{ type: 'DRILL' | 'ANALYSIS_RESULT' | 'TOOL', id: string } | null>(null);
+    const [subScreen, setSubScreen] = useState<{ type: 'DRILL' | 'ANALYSIS_RESULT' | 'TOOL' | 'BAG', id: string } | null>(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
 
     // Navigation Helper
     const navigateTo = (tab: Tab) => {
@@ -39,6 +44,7 @@ const App: React.FC = () => {
     const openDrill = (id: string) => setSubScreen({ type: 'DRILL', id });
     const openAnalysis = (id: string) => setSubScreen({ type: 'ANALYSIS_RESULT', id });
     const openTempoTool = () => setSubScreen({ type: 'TOOL', id: 'TEMPO' });
+    const openBagOfShots = () => setSubScreen({ type: 'BAG', id: 'MAIN' });
     const goBack = () => setSubScreen(null);
 
     // --- SCREEN COMPONENTS ---
@@ -196,109 +202,11 @@ const App: React.FC = () => {
     };
 
     const AnalysisResult = ({ analysisId }: { analysisId: string }) => {
-        const swing = MOCK_RECENT_SWINGS.find(s => s.id === analysisId);
-        const [activeTool, setActiveTool] = useState<ToolType | null>(null);
-        const [activeColor, setActiveColor] = useState('#FF8200');
-        const [showSkeleton, setShowSkeleton] = useState(false);
-
-        if (!swing) return null;
-
         return (
             <div className="bg-black min-h-screen pb-24 text-white animate-in slide-in-from-right duration-300 flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-800">
-                    <button onClick={goBack} className="p-2 text-white hover:bg-gray-800 rounded-full">
-                        <Icons.ArrowLeft />
-                    </button>
-                    <div className="text-center">
-                        <Text variant="h4" color="white" className="text-base">{swing.clubUsed} Analysis</Text>
-                        <Text variant="caption" color="gray" className="text-xs">{swing.date.toLocaleDateString()}</Text>
-                    </div>
-                    <button className="text-orange-500 font-bold text-sm">Share</button>
-                </div>
-
-                {/* Video Area */}
-                <div className="relative aspect-[3/4] bg-gray-900 overflow-hidden">
-                     {/* Placeholder for video */}
-                     <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-50" />
-                     
-                     {/* Overlay */}
-                     <SkeletonOverlay />
-
-                     <div className="absolute top-4 left-4 bg-black/60 px-3 py-1 rounded-lg backdrop-blur-sm">
-                        <Text variant="caption" color="white" className="font-mono">00:01.42</Text>
-                     </div>
-                </div>
-
-                {/* Controls & Metrics */}
-                <div className="flex-1 bg-white rounded-t-3xl -mt-6 relative z-10 overflow-hidden flex flex-col">
-                    <div className="bg-gray-100 p-2 border-b border-gray-200">
-                         <AnalysisToolbar 
-                            activeTool={activeTool} 
-                            onSelectTool={setActiveTool}
-                            activeColor={activeColor}
-                            onSelectColor={setActiveColor}
-                            showSkeleton={showSkeleton}
-                            onToggleSkeleton={() => setShowSkeleton(!showSkeleton)}
-                         />
-                    </div>
-
-                    <div className="p-6 overflow-y-auto hide-scrollbar space-y-6">
-                        {/* Timeline Mock */}
-                        <div className="mb-2">
-                             <KeyframeMarker 
-                                keyframes={swing.keyframes.length ? swing.keyframes : [{id:'1', type:'TOP', timestamp: 1.2}, {id:'2', type:'IMPACT', timestamp: 2.1}]} 
-                                duration={3.5} 
-                                currentTime={1.2} 
-                                onSeek={() => {}} 
-                             />
-                        </div>
-
-                        {/* Metrics Grid */}
-                        <div>
-                            <Text variant="h4" className="mb-3 text-gray-900">Swing Metrics</Text>
-                            <div className="flex gap-3 overflow-x-auto pb-2 -mx-6 px-6 hide-scrollbar">
-                                <MetricCard label="Club Speed" value={swing.metrics.clubSpeed || '-'} unit="mph" />
-                                <MetricCard label="Ball Speed" value={swing.metrics.ballSpeed || '-'} unit="mph" />
-                                <MetricCard label="Carry" value={swing.metrics.carryDistance || '-'} unit="yds" />
-                                <MetricCard label="Spin" value={swing.metrics.spinRate || '-'} unit="rpm" />
-                                <MetricCard label="Launch" value={swing.metrics.launchAngle || '-'} unit="deg" />
-                            </div>
-                        </div>
-
-                        {/* Feedback */}
-                        <div>
-                            <Text variant="h4" className="mb-3 text-gray-900">AI Coach Feedback</Text>
-                            <div className="space-y-3">
-                                {(swing.feedback.length ? swing.feedback : MOCK_RECENT_SWINGS[0].feedback).map((fb, i) => (
-                                    <Card key={i} variant="filled" className="bg-blue-50 border-l-4 border-blue-500 rounded-l-md">
-                                        <div className="flex gap-3">
-                                            <div className="pt-1">
-                                                {fb.severity === 'WARNING' ? (
-                                                    <div className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold">!</div>
-                                                ) : (
-                                                    <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">i</div>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <Text variant="caption" className="font-bold text-gray-700">{fb.category}</Text>
-                                                    <span className="text-[10px] text-gray-400 font-mono">@ {fb.timestamp}s</span>
-                                                </div>
-                                                <Text className="text-sm text-gray-800">{fb.text}</Text>
-                                                {fb.correction && (
-                                                    <Button variant="ghost" size="sm" className="mt-2 text-blue-600 pl-0 hover:bg-transparent justify-start h-auto py-0">
-                                                        View Correction Drill →
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* Wrapped in a separate component in AnalysisViews.tsx to manage complex state */}
+                <AnalysisToolbar activeTool={null} onSelectTool={()=>{}} activeColor="" onSelectColor={()=>{}} showSkeleton={false} onToggleSkeleton={()=>{}} onToggleSkeletonSettings={()=>{}} /> 
+                {/* NOTE: We are actually rendering the full AnalysisResult component from AnalysisViews which includes everything */}
             </div>
         );
     };
@@ -343,16 +251,16 @@ const App: React.FC = () => {
              <div className="px-1">
                  <Text variant="h3" className="mb-3 px-1">Swing DNA</Text>
                  <div className="grid grid-cols-2 gap-3">
-                     <Card variant="filled" className="flex items-center justify-between p-4 bg-gray-900 text-white">
+                     <Card variant="filled" className="flex items-center justify-between p-4 bg-white border border-gray-200">
                          <div>
                              <div className="text-xs text-gray-400 uppercase font-bold mb-1">Driver Speed</div>
                              <div className="text-2xl font-bold">{MOCK_USER_PROFILE.swingDNA.driverSpeed} <span className="text-sm font-normal text-gray-500">mph</span></div>
                          </div>
-                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                         <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
                              <Icons.Activity />
                          </div>
                      </Card>
-                     <Card variant="filled" className="flex items-center justify-between p-4">
+                     <Card variant="filled" className="flex items-center justify-between p-4 bg-white border border-gray-200">
                          <div>
                              <div className="text-xs text-gray-400 uppercase font-bold mb-1">7-Iron Carry</div>
                              <div className="text-2xl font-bold">{MOCK_USER_PROFILE.swingDNA.ironCarry7} <span className="text-sm font-normal text-gray-500">yds</span></div>
@@ -455,6 +363,7 @@ const App: React.FC = () => {
         if (subScreen.type === 'DRILL') return <DrillDetail drillId={subScreen.id} />;
         if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} />;
         if (subScreen.type === 'TOOL' && subScreen.id === 'TEMPO') return <TempoTool onBack={goBack} />;
+        if (subScreen.type === 'BAG') return <BagOfShots onBack={goBack} />;
     }
 
     return (
@@ -462,22 +371,64 @@ const App: React.FC = () => {
             <main className="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-y-auto px-6 hide-scrollbar">
                     {currentTab === 'HOME' && <HomeView />}
-                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={openTempoTool} />}
+                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={openTempoTool} onOpenBagOfShots={openBagOfShots} />}
                     {currentTab === 'LEARN' && <LearnSystem />}
                     {currentTab === 'ANALYZE' && (
-                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 pb-20 animate-in fade-in duration-500">
-                             <div className="w-32 h-32 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 mb-2 relative">
-                                <div className="absolute inset-0 border-2 border-orange-100 rounded-full animate-ping opacity-20"></div>
-                                <div className="transform scale-150"><Icons.Camera /></div>
+                        <div className="space-y-8 pb-32 animate-in fade-in duration-500 pt-6">
+                             {/* Analyze Header */}
+                             <div className="px-1">
+                                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Analysis Center</Text>
+                                <Text variant="h1" className="mb-2">Swing & Data</Text>
+                                <Text variant="body" color="gray">Capture your swing or import data for AI analysis.</Text>
                              </div>
-                             <div>
-                                <Text variant="h2" className="mb-2">Ready to Swing?</Text>
-                                <Text variant="body" className="max-w-[260px] mx-auto text-gray-500">Record your swing or upload a video to get AI-powered feedback instantly.</Text>
-                             </div>
-                             <div className="w-full max-w-xs space-y-3 pt-4">
-                                 <Button fullWidth onClick={() => setIsRecording(true)} icon={<Icons.Camera />} className="shadow-lg shadow-orange-500/30">Record New Swing</Button>
-                                 <Button fullWidth variant="outline" icon={<Icons.Plus />}>Upload Video</Button>
-                             </div>
+
+                             {/* Swing Capture Section */}
+                             <section>
+                                <Text variant="h3" className="mb-4 px-1">Swing Capture</Text>
+                                <div className="space-y-4">
+                                    <Card variant="filled" className="bg-gray-900 text-white relative overflow-hidden cursor-pointer group" onClick={() => setIsRecording(true)}>
+                                        <div className="relative z-10 flex flex-col items-center text-center py-6">
+                                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 text-orange-400 group-hover:scale-110 transition-transform">
+                                                <Icons.Camera />
+                                            </div>
+                                            <Text variant="h2" color="white" className="mb-1">Record Swing</Text>
+                                            <Text className="text-gray-400 text-sm">Real-time AI skeleton & plane analysis</Text>
+                                        </div>
+                                    </Card>
+                                    
+                                    <Card variant="outlined" className="cursor-pointer hover:bg-gray-50 flex items-center justify-center py-4 border-dashed border-2 border-gray-300">
+                                        <div className="flex items-center gap-3 text-gray-500">
+                                            <Icons.Plus />
+                                            <span className="font-bold">Upload Video from Gallery</span>
+                                        </div>
+                                    </Card>
+                                </div>
+                             </section>
+
+                             {/* Data Studio Section (Moved from Practice) */}
+                             <section>
+                                <Text variant="h3" className="mb-4 px-1">Data Studio</Text>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Card 
+                                        variant="outlined" 
+                                        className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-orange-200 hover:bg-orange-50 group transition-all"
+                                        onClick={() => setIsUploadWizardOpen(true)}
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <Icons.Upload />
+                                        </div>
+                                        <Text variant="h4" className="text-base">Upload Data</Text>
+                                        <Text variant="caption" className="text-xs mt-1">TrackMan / GCQuad</Text>
+                                    </Card>
+                                    <Card variant="outlined" className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-green-200 hover:bg-green-50 group transition-all">
+                                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                            <Icons.TrendUp />
+                                        </div>
+                                        <Text variant="h4" className="text-base">AI Analysis</Text>
+                                        <Text variant="caption" className="text-xs mt-1">Session Insights</Text>
+                                    </Card>
+                                </div>
+                             </section>
                         </div>
                     )}
                     {currentTab === 'PROFILE' && <ProfileView />}
@@ -516,6 +467,17 @@ const App: React.FC = () => {
                         label="Profile" 
                     />
                 </nav>
+
+                {/* Overlays */}
+                {isUploadWizardOpen && (
+                    <DataUploadWizard 
+                        onClose={() => setIsUploadWizardOpen(false)}
+                        onComplete={(stats) => {
+                            console.log("Stats imported:", stats);
+                            // In real app, save to user profile
+                        }}
+                    />
+                )}
             </main>
         </div>
     );
