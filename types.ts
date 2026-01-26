@@ -25,6 +25,8 @@ export interface SwingMetrics {
     launchAngle?: number;
     path?: number;
     faceToPath?: number;
+    faceAngle?: number; // Added for D-Plane
+    attackAngle?: number; // Added for D-Plane
     // Short Game Specifics
     launchDirection?: number;
     skidDistance?: number; // Putting
@@ -32,7 +34,7 @@ export interface SwingMetrics {
 }
 
 // Data Import Types
-export type ImportSource = 'ARCCOS' | 'TANGENT' | 'TRACKMAN' | 'GCQUAD' | 'MANUAL';
+export type ImportSource = 'ARCCOS' | 'TANGENT' | 'TRACKMAN' | 'GCQUAD' | 'MANUAL' | 'SHOT_DOCTOR';
 
 export interface StrokesGainedStats {
     offTee: number;

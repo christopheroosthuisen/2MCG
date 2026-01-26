@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Text, Button, Card, Input, Badge, ProgressBar } from './UIComponents';
-import { ImportSource, StrokesGainedStats, RecommendationEngine, Drill, Course } from '../types';
+import { ImportSource, StrokesGainedStats, RecommendationEngine, SwingMetrics } from '../types';
 import { COLORS, MOCK_DRILLS, MOCK_COURSES } from '../constants';
 
 const Icons = {
@@ -11,100 +11,215 @@ const Icons = {
     Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
     Scan: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>,
     ArrowRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>,
-    Refresh: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+    Refresh: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>,
+    Eye: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
 };
+
+// --- GOLF PHYSICS ENGINE (Ported from Python) ---
+class GolfPhysicsEngine {
+    data: SwingMetrics;
+    hand: 'Right' | 'Left';
+    issues: string[] = [];
+    praise: string[] = [];
+
+    constructor(data: SwingMetrics, hand: 'Right' | 'Left' = 'Right') {
+        this.data = data;
+        this.hand = hand;
+    }
+
+    analyzeFlightLaws() {
+        const path = this.data.path || 0;
+        const face = this.data.faceAngle || 0;
+        
+        // Adjust for Dexterity
+        const calcPath = this.hand === 'Right' ? path : -path;
+        const calcFace = this.hand === 'Right' ? face : -face;
+
+        // 1. Calculate Face-to-Path (The metric that dictates curve)
+        const faceToPath = calcFace - calcPath;
+        
+        // 2. Determine Start Direction
+        let startDir = "Straight";
+        if (Math.abs(calcFace) < 1.0) startDir = "Straight";
+        else if (calcFace > 0) startDir = "Right";
+        else startDir = "Left";
+
+        // 3. Determine Curvature
+        let curveType = "Straight";
+        if (Math.abs(faceToPath) < 1.5) curveType = "Straight";
+        else if (faceToPath > 0) curveType = this.hand === 'Right' ? "Fade/Slice (Curves Right)" : "Fade/Slice (Curves Left)";
+        else curveType = this.hand === 'Right' ? "Draw/Hook (Curves Left)" : "Draw/Hook (Curves Right)";
+
+        // 4. Diagnosis
+        const diagnosisText = `Ball started ${startDir} and hit a ${curveType}.`;
+        
+        // SLICE LOGIC
+        if (faceToPath > 2.0) {
+            if (calcPath < -2.0) { // Out-to-In
+                this.issues.push(`Slice Cause (Over-the-Top): You swung ${Math.abs(path)}° ${this.hand === 'Right' ? 'Left' : 'Right'} across the ball with an Open Face.`);
+            } else { // Push Slice
+                this.issues.push(`Push-Slice Cause: Your path was okay, but your Face was wide open (${face}°). Likely a grip issue or cupped wrist.`);
+            }
+        }
+
+        // HOOK LOGIC
+        if (faceToPath < -2.0) {
+            if (calcPath > 2.0) { // In-to-Out
+                this.issues.push(`Hook Cause (Stuck): You swung ${Math.abs(path)}° ${this.hand === 'Right' ? 'Right' : 'Left'} (In-to-Out) but flipped your hands, closing the face.`);
+            }
+        }
+        
+        return { diagnosisText, faceToPath };
+    }
+
+    analyzeEfficiency() {
+        let smash = this.data.smashFactor || 0;
+        const cs = this.data.clubSpeed || 0;
+        const bs = this.data.ballSpeed || 0;
+        const spin = this.data.spinRate || 0;
+        const aoa = this.data.attackAngle || 0;
+
+        if (smash === 0 && cs > 0) {
+            smash = bs / cs;
+        }
+
+        // 1. Smash Factor Check
+        if (smash >= 1.48) {
+            this.praise.push(`Elite Ball Striking: Smash Factor of ${smash.toFixed(2)} means a perfect center strike.`);
+        } else if (smash < 1.43 && cs > 90) {
+            this.issues.push(`Low Efficiency (${smash.toFixed(2)}): You are losing ball speed. Likely hitting Heel or Toe.`);
+        }
+
+        // 2. Spin/Launch Optimization
+        if (cs > 85) { // Driver speeds
+            if (spin > 3200) {
+                let msg = `High Spin (${spin} rpm): This kills distance.`;
+                if (aoa < 0) {
+                    msg += " Cause: Hitting Down (Negative Attack Angle) on a driver creates excess spin.";
+                } else {
+                    msg += " Cause: Strike was likely low on the face (Gear Effect).";
+                }
+                this.issues.push(msg);
+            } else if (spin < 1800 && spin > 0) {
+                this.issues.push("Low Spin: Careful, the ball might drop out of the sky too fast.");
+            }
+        }
+
+        return smash;
+    }
+}
 
 type WizardStep = 'SELECT_SOURCE' | 'INPUT_DATA' | 'PROCESSING' | 'RECOMMENDATION';
 
 interface DataUploadWizardProps {
     onClose: () => void;
-    onComplete: (stats: StrokesGainedStats) => void;
+    onComplete: (stats: any) => void;
+}
+
+interface ShotAnalysisResult {
+    diagnosis: string;
+    ftp: number;
+    smash: number;
+    issues: string[];
+    praise: string[];
 }
 
 export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onComplete }) => {
     const [step, setStep] = useState<WizardStep>('SELECT_SOURCE');
     const [source, setSource] = useState<ImportSource | null>(null);
-    const [stats, setStats] = useState<StrokesGainedStats>({
-        offTee: 0,
-        approach: 0,
-        aroundGreen: 0,
-        putting: 0,
-        total: 0,
-        handicap: 5.4 // Default mock
+    const [dexterity, setDexterity] = useState<'Right' | 'Left'>('Right');
+    
+    // Strokes Gained State
+    const [sgStats, setSgStats] = useState<StrokesGainedStats>({
+        offTee: 0, approach: 0, aroundGreen: 0, putting: 0, total: 0, handicap: 5.4
     });
+    
+    // Shot Data State
+    const [shotMetrics, setShotMetrics] = useState<SwingMetrics>({
+        clubSpeed: 105, ballSpeed: 155, path: 0, faceAngle: 0, spinRate: 2500, launchAngle: 12, attackAngle: 0, smashFactor: 1.48
+    });
+
     const [recommendation, setRecommendation] = useState<RecommendationEngine | null>(null);
+    const [shotAnalysis, setShotAnalysis] = useState<ShotAnalysisResult | null>(null);
 
     // --- LOGIC ---
 
-    const generateRecommendations = (data: StrokesGainedStats): RecommendationEngine => {
-        // Simple logic to find the weakest link
-        const areas = [
-            { id: 'DRIVING', val: data.offTee },
-            { id: 'IRON_PLAY', val: data.approach },
-            { id: 'SHORT_GAME', val: data.aroundGreen },
-            { id: 'PUTTING', val: data.putting }
-        ];
-
-        // Sort by lowest value (worst performance)
-        areas.sort((a, b) => a.val - b.val);
-        const worstArea = areas[0];
-
-        let rec: RecommendationEngine = {
-            focusArea: worstArea.id as any,
-            recommendedDrills: [],
-            reasoning: ''
-        };
-
-        if (worstArea.id === 'PUTTING') {
-            rec.recommendedCourseId = 'c7'; // Putting Mastery
-            rec.recommendedDrills = ['3', 'd-putt-2'];
-            rec.reasoning = `You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes per round on the greens. This is your biggest opportunity for improvement.`;
-        } else if (worstArea.id === 'SHORT_GAME') {
-             rec.recommendedCourseId = 'c5'; // Chipping Artistry
-             rec.recommendedDrills = ['4', 'd-chip-2', 'd-bunker-1'];
-             rec.reasoning = `Your short game is costing you ${Math.abs(worstArea.val).toFixed(2)} strokes. Tightening up inside 50 yards will save par more often.`;
-        } else if (worstArea.id === 'IRON_PLAY') {
-             rec.recommendedCourseId = 'c3'; // Iron Play
-             rec.recommendedDrills = ['1']; // Takeaway
-             rec.reasoning = `Approach play is the key separator. You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes here. Let's work on contact and distance control.`;
-        } else {
-             rec.recommendedCourseId = 'c1'; // Driving
-             rec.recommendedDrills = ['1'];
-             rec.reasoning = `Driving is setting you back ${Math.abs(worstArea.val).toFixed(2)} strokes. Finding the fairway and maximizing distance is our priority.`;
-        }
-
-        return rec;
-    };
-
-    const handleSubmitData = () => {
+    const processData = () => {
         setStep('PROCESSING');
-        // Simulate processing delay
         setTimeout(() => {
-            const rec = generateRecommendations(stats);
-            setRecommendation(rec);
+            if (source === 'SHOT_DOCTOR') {
+                const engine = new GolfPhysicsEngine(shotMetrics, dexterity);
+                const { diagnosisText, faceToPath } = engine.analyzeFlightLaws();
+                const smash = engine.analyzeEfficiency();
+                
+                setShotAnalysis({
+                    diagnosis: diagnosisText,
+                    ftp: faceToPath,
+                    smash,
+                    issues: engine.issues,
+                    praise: engine.praise
+                });
+            } else {
+                // Existing SG Logic
+                const areas = [
+                    { id: 'DRIVING', val: sgStats.offTee },
+                    { id: 'IRON_PLAY', val: sgStats.approach },
+                    { id: 'SHORT_GAME', val: sgStats.aroundGreen },
+                    { id: 'PUTTING', val: sgStats.putting }
+                ];
+                areas.sort((a, b) => a.val - b.val);
+                const worstArea = areas[0];
+
+                let rec: RecommendationEngine = {
+                    focusArea: worstArea.id as any,
+                    recommendedDrills: [],
+                    reasoning: ''
+                };
+
+                if (worstArea.id === 'PUTTING') {
+                    rec.recommendedCourseId = 'c7'; 
+                    rec.recommendedDrills = ['3', 'd-putt-2'];
+                    rec.reasoning = `You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes per round on the greens.`;
+                } else if (worstArea.id === 'SHORT_GAME') {
+                     rec.recommendedCourseId = 'c5'; 
+                     rec.recommendedDrills = ['4', 'd-chip-2', 'd-bunker-1'];
+                     rec.reasoning = `Your short game is costing you ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
+                } else if (worstArea.id === 'IRON_PLAY') {
+                     rec.recommendedCourseId = 'c3';
+                     rec.recommendedDrills = ['1'];
+                     rec.reasoning = `Approach play is the key separator. You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes here.`;
+                } else {
+                     rec.recommendedCourseId = 'c1';
+                     rec.recommendedDrills = ['1'];
+                     rec.reasoning = `Driving is setting you back ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
+                }
+                setRecommendation(rec);
+            }
             setStep('RECOMMENDATION');
-        }, 1500);
+        }, 1200);
     };
 
-    // --- SUB-COMPONENTS ---
+    // --- COMPONENTS ---
 
     const SourceButton: React.FC<{ 
         id: ImportSource, 
         label: string, 
         icon?: React.ReactNode,
-        isApp?: boolean
-    }> = ({ id, label, icon, isApp }) => (
+        isApp?: boolean,
+        description?: string
+    }> = ({ id, label, icon, isApp, description }) => (
         <button
             onClick={() => {
                 setSource(id);
                 setStep('INPUT_DATA');
             }}
-            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all shadow-sm group h-32 w-full"
+            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all shadow-sm group h-32 w-full relative overflow-hidden"
         >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 text-2xl shadow-sm ${isApp ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 text-2xl shadow-sm ${isApp ? 'bg-black text-white' : (id === 'SHOT_DOCTOR' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600')}`}>
                 {icon || label[0]}
             </div>
             <span className="text-sm font-bold text-gray-700 group-hover:text-orange-700">{label}</span>
+            {description && <span className="text-[10px] text-gray-400 mt-1">{description}</span>}
         </button>
     );
 
@@ -112,30 +227,29 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
         label: string;
         value: number;
         onChange: (v: number) => void;
-    }> = ({ label, value, onChange }) => (
+        step?: number;
+    }> = ({ label, value, onChange, step = 0.1 }) => (
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-            <span className="font-bold text-gray-700 text-sm">{label}</span>
+            <span className="font-bold text-gray-700 text-sm truncate pr-2">{label}</span>
             <div className="flex items-center gap-2">
                  <button 
                     className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100"
-                    onClick={() => onChange(Number((value - 0.1).toFixed(1)))}
+                    onClick={() => onChange(Number((value - step).toFixed(1)))}
                  >-</button>
                  <input 
                     type="number" 
-                    step="0.1"
+                    step={step}
                     className="w-16 text-center font-mono font-bold bg-transparent outline-none"
                     value={value}
                     onChange={(e) => onChange(parseFloat(e.target.value))}
                  />
                  <button 
                     className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100"
-                    onClick={() => onChange(Number((value + 0.1).toFixed(1)))}
+                    onClick={() => onChange(Number((value + step).toFixed(1)))}
                  >+</button>
             </div>
         </div>
     );
-
-    // --- RENDER ---
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white sm:rounded-none animate-in slide-in-from-bottom duration-300">
@@ -145,7 +259,9 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                     <Icons.Close />
                 </button>
                 <div className="text-center">
-                    <Text variant="h4" className="text-base font-bold">Import Data</Text>
+                    <Text variant="h4" className="text-base font-bold">
+                        {step === 'SELECT_SOURCE' ? 'Data Studio' : source === 'SHOT_DOCTOR' ? 'Shot Analysis' : 'Import Stats'}
+                    </Text>
                     <div className="flex gap-1 justify-center mt-1">
                         {[1, 2, 3].map(i => (
                             <div key={i} className={`h-1 rounded-full w-4 ${
@@ -158,7 +274,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                         ))}
                     </div>
                 </div>
-                <div className="w-8"></div> {/* Spacer */}
+                <div className="w-8"></div>
             </div>
 
             {/* Content Body */}
@@ -168,16 +284,15 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {step === 'SELECT_SOURCE' && (
                     <div className="space-y-6 max-w-md mx-auto">
                         <div className="text-center mb-8">
-                            <Text variant="h2" className="mb-2">Where is your data?</Text>
-                            <Text color="gray">Connect a device or import stats from your favorite tracking app.</Text>
+                            <Text variant="h2" className="mb-2">Choose Mode</Text>
+                            <Text color="gray">Analyze a single shot using physics or import round stats.</Text>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                            <SourceButton id="ARCCOS" label="Arccos" icon={<img src="https://images.unsplash.com/photo-1629210087796-749e7b243452?w=50&h=50&fit=crop" className="w-full h-full object-cover rounded-lg opacity-80"/>} isApp />
-                            <SourceButton id="TANGENT" label="Tangent" icon={<span className="font-serif italic text-white text-3xl">t</span>} isApp />
+                            <SourceButton id="SHOT_DOCTOR" label="Shot Doctor" description="Analyze 1 Shot" icon={<Icons.Eye />} />
+                            <SourceButton id="MANUAL" label="Manual Entry" description="Strokes Gained" icon={<Icons.Activity />} />
                             <SourceButton id="TRACKMAN" label="TrackMan" icon={<div className="w-6 h-6 bg-orange-500 rounded-full"/>} />
-                            <SourceButton id="GCQUAD" label="GCQuad" icon={<div className="w-6 h-6 bg-gray-400 rounded-sm"/>} />
-                            <SourceButton id="MANUAL" label="Manual Entry" icon={<Icons.Activity />} />
+                            <SourceButton id="ARCCOS" label="Arccos" icon={<div className="w-6 h-6 bg-black rounded-lg"/>} isApp />
                         </div>
                     </div>
                 )}
@@ -185,17 +300,32 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {/* STEP 2: INPUT DATA */}
                 {step === 'INPUT_DATA' && (
                     <div className="space-y-6 max-w-md mx-auto">
-                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-                                {source && source[0]}
+                        {/* Source Header */}
+                         <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center font-bold">
+                                    {source && source[0]}
+                                </div>
+                                <div>
+                                    <Text variant="h4" className="text-base">{source === 'SHOT_DOCTOR' ? 'Ball Data' : 'SG Data'}</Text>
+                                    <Text variant="caption">Enter values</Text>
+                                </div>
                             </div>
-                            <div>
-                                <Text variant="h3" className="text-lg">Input {source === 'MANUAL' ? 'Stats' : `${source} Data`}</Text>
-                                <Text variant="caption">Enter your Strokes Gained (SG) values.</Text>
-                            </div>
+                            {source === 'SHOT_DOCTOR' && (
+                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                    <button 
+                                        onClick={() => setDexterity('Right')}
+                                        className={`px-3 py-1 text-xs font-bold rounded ${dexterity === 'Right' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                                    >RH</button>
+                                    <button 
+                                        onClick={() => setDexterity('Left')}
+                                        className={`px-3 py-1 text-xs font-bold rounded ${dexterity === 'Left' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                                    >LH</button>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Scanner Option (Simulated) */}
+                        {/* Scanner Option */}
                         <div className="bg-gray-900 text-white rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-colors shadow-lg">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400">
@@ -203,27 +333,33 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                                 </div>
                                 <div>
                                     <div className="font-bold text-sm">Scan Screenshot</div>
-                                    <div className="text-xs text-gray-400">Upload an image from your app</div>
+                                    <div className="text-xs text-gray-400">Auto-fill from photo</div>
                                 </div>
                             </div>
-                            <Badge variant="neutral" className="bg-white/10 text-white border-none">Auto-fill</Badge>
+                            <Badge variant="neutral" className="bg-white/10 text-white border-none">AI</Badge>
                         </div>
 
-                        <div className="flex items-center gap-4 py-2">
-                             <div className="h-px bg-gray-200 flex-1"></div>
-                             <span className="text-xs text-gray-400 font-bold uppercase">Or enter manually</span>
-                             <div className="h-px bg-gray-200 flex-1"></div>
-                        </div>
+                        <div className="h-px bg-gray-200 w-full my-2"></div>
 
+                        {/* Inputs */}
                         <div className="space-y-3">
-                            <StatInput label="SG: Off the Tee" value={stats.offTee} onChange={(v) => setStats({...stats, offTee: v})} />
-                            <StatInput label="SG: Approach" value={stats.approach} onChange={(v) => setStats({...stats, approach: v})} />
-                            <StatInput label="SG: Around Green" value={stats.aroundGreen} onChange={(v) => setStats({...stats, aroundGreen: v})} />
-                            <StatInput label="SG: Putting" value={stats.putting} onChange={(v) => setStats({...stats, putting: v})} />
-                        </div>
-
-                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-blue-800">
-                            <strong>Note:</strong> Negative values indicate strokes lost against scratch.
+                            {source === 'SHOT_DOCTOR' ? (
+                                <>
+                                    <StatInput label="Club Speed (mph)" value={shotMetrics.clubSpeed || 0} onChange={(v) => setShotMetrics({...shotMetrics, clubSpeed: v})} step={1} />
+                                    <StatInput label="Ball Speed (mph)" value={shotMetrics.ballSpeed || 0} onChange={(v) => setShotMetrics({...shotMetrics, ballSpeed: v})} step={1} />
+                                    <StatInput label="Path (+R/-L)" value={shotMetrics.path || 0} onChange={(v) => setShotMetrics({...shotMetrics, path: v})} />
+                                    <StatInput label="Face (+R/-L)" value={shotMetrics.faceAngle || 0} onChange={(v) => setShotMetrics({...shotMetrics, faceAngle: v})} />
+                                    <StatInput label="Spin (rpm)" value={shotMetrics.spinRate || 0} onChange={(v) => setShotMetrics({...shotMetrics, spinRate: v})} step={100} />
+                                    <StatInput label="AoA (+Up/-Dn)" value={shotMetrics.attackAngle || 0} onChange={(v) => setShotMetrics({...shotMetrics, attackAngle: v})} />
+                                </>
+                            ) : (
+                                <>
+                                    <StatInput label="SG: Off the Tee" value={sgStats.offTee} onChange={(v) => setSgStats({...sgStats, offTee: v})} />
+                                    <StatInput label="SG: Approach" value={sgStats.approach} onChange={(v) => setSgStats({...sgStats, approach: v})} />
+                                    <StatInput label="SG: Around Green" value={sgStats.aroundGreen} onChange={(v) => setSgStats({...sgStats, aroundGreen: v})} />
+                                    <StatInput label="SG: Putting" value={sgStats.putting} onChange={(v) => setSgStats({...sgStats, putting: v})} />
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
@@ -232,91 +368,99 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {step === 'PROCESSING' && (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                         <div className="w-20 h-20 border-4 border-gray-100 border-t-orange-500 rounded-full animate-spin mb-6"></div>
-                        <Text variant="h2" className="mb-2">Analyzing Data</Text>
-                        <Text color="gray">The AI is identifying your biggest opportunities for improvement...</Text>
+                        <Text variant="h2" className="mb-2">Crunching Numbers</Text>
+                        <Text color="gray">{source === 'SHOT_DOCTOR' ? 'Applying D-Plane Physics...' : 'Comparing against Tour averages...'}</Text>
                     </div>
                 )}
 
-                 {/* STEP 4: RECOMMENDATION */}
-                 {step === 'RECOMMENDATION' && recommendation && (
+                 {/* STEP 4: RECOMMENDATION / RESULTS */}
+                 {step === 'RECOMMENDATION' && (
                     <div className="space-y-6 max-w-md mx-auto pb-20">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Icons.Check />
-                            </div>
-                            <Text variant="h2" className="mb-2">Analysis Complete</Text>
-                            <Text color="gray" className="text-sm">We've generated a custom plan based on your stats.</Text>
-                        </div>
-
-                        <Card variant="filled" className="bg-orange-50 border-orange-200">
-                            <Text variant="caption" className="font-bold text-orange-800 uppercase tracking-widest mb-2">Primary Focus Area</Text>
-                            <div className="flex items-center justify-between mb-2">
-                                <Text variant="h2" className="text-gray-900">{recommendation.focusArea.replace('_', ' ')}</Text>
-                                <Badge variant="error" className="bg-red-100 text-red-700">Needs Work</Badge>
-                            </div>
-                            <Text className="text-sm text-gray-700 leading-relaxed mb-4">
-                                {recommendation.reasoning}
-                            </Text>
-                            <div className="flex items-center gap-2 text-xs font-bold text-orange-700">
-                                <Icons.Activity />
-                                Expected Improvement: 2.1 Strokes
-                            </div>
-                        </Card>
-
-                        <div className="space-y-3">
-                            <Text variant="h4" className="text-sm uppercase text-gray-400 font-bold tracking-widest">Recommended Plan</Text>
-                            
-                            {/* Course Recommendation */}
-                            {recommendation.recommendedCourseId && (
-                                <div className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 cursor-pointer hover:border-orange-500 transition-colors shadow-sm">
-                                    <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                                        {(() => {
-                                            const c = MOCK_COURSES.find(co => co.id === recommendation.recommendedCourseId);
-                                            return c ? <img src={c.thumbnailUrl} className="w-full h-full object-cover" /> : <div className="bg-gray-800 w-full h-full"/>
-                                        })()}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <Badge variant="info" className="text-[10px] py-0">Course</Badge>
+                        {/* SHOT DOCTOR RESULTS */}
+                        {source === 'SHOT_DOCTOR' && shotAnalysis && (
+                            <>
+                                <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                                    <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-widest mb-3">Analysis Result</Text>
+                                    
+                                    <div className="flex gap-4 mb-6">
+                                        <div className="flex-1 text-center border-r border-gray-100">
+                                            <div className="text-3xl font-black text-gray-900">{shotAnalysis.smash.toFixed(2)}</div>
+                                            <div className="text-[10px] uppercase font-bold text-gray-400">Smash Factor</div>
                                         </div>
-                                        <Text variant="body" className="font-bold text-sm leading-tight mb-1">
-                                            {MOCK_COURSES.find(co => co.id === recommendation.recommendedCourseId)?.title}
-                                        </Text>
-                                        <Text variant="caption" className="text-xs">
-                                            Master the fundamentals of {recommendation.focusArea.toLowerCase().replace('_', ' ')}.
-                                        </Text>
+                                        <div className="flex-1 text-center">
+                                            <div className="text-3xl font-black text-gray-900">{shotAnalysis.ftp.toFixed(1)}°</div>
+                                            <div className="text-[10px] uppercase font-bold text-gray-400">Face to Path</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-blue-900 text-sm mb-4">
+                                        <strong>Diagnosis:</strong> {shotAnalysis.diagnosis}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {shotAnalysis.issues.map((issue, i) => (
+                                            <div key={i} className="flex gap-2 items-start text-sm text-red-800 bg-red-50 p-2 rounded-lg">
+                                                <span>⚠️</span>
+                                                <span>{issue}</span>
+                                            </div>
+                                        ))}
+                                        {shotAnalysis.praise.map((p, i) => (
+                                            <div key={i} className="flex gap-2 items-start text-sm text-green-800 bg-green-50 p-2 rounded-lg">
+                                                <span>✅</span>
+                                                <span>{p}</span>
+                                            </div>
+                                        ))}
+                                        {shotAnalysis.issues.length === 0 && shotAnalysis.praise.length === 0 && (
+                                            <div className="text-sm text-gray-500 italic text-center">No major mechanical flaws detected in this shot.</div>
+                                        )}
                                     </div>
                                 </div>
-                            )}
 
-                             {/* Drill Recommendation */}
-                             {recommendation.recommendedDrills.slice(0, 1).map(drillId => {
-                                 const drill = MOCK_DRILLS.find(d => d.id === drillId);
-                                 if (!drill) return null;
-                                 return (
-                                    <div key={drillId} className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 cursor-pointer hover:border-orange-500 transition-colors shadow-sm">
-                                        <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
-                                            <img src={drill.thumbnailUrl} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                                <div className="text-white transform scale-75"><Icons.Activity /></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between mb-1">
-                                                <Badge variant="warning" className="text-[10px] py-0">Drill</Badge>
-                                                <span className="text-[10px] text-gray-400">{drill.durationMinutes} min</span>
-                                            </div>
-                                            <Text variant="body" className="font-bold text-sm leading-tight mb-1">
-                                                {drill.title}
-                                            </Text>
-                                            <Text variant="caption" className="text-xs line-clamp-1">
-                                                {drill.description}
-                                            </Text>
-                                        </div>
+                                <div className="bg-gray-900 text-white rounded-2xl p-5">
+                                    <Text variant="h4" color="white" className="mb-2">The Math (D-Plane)</Text>
+                                    <div className="space-y-2 text-sm text-gray-400">
+                                        <p><strong>Curvature:</strong> Created by difference between Face ({shotMetrics.faceAngle}°) and Path ({shotMetrics.path}°).</p>
+                                        <p><strong>Efficiency:</strong> Ball Speed ({shotMetrics.ballSpeed}) / Club Speed ({shotMetrics.clubSpeed}) = {shotAnalysis.smash.toFixed(2)}</p>
                                     </div>
-                                 );
-                             })}
-                        </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* STROKES GAINED RESULTS */}
+                        {source !== 'SHOT_DOCTOR' && recommendation && (
+                            <>
+                                <Card variant="filled" className="bg-orange-50 border-orange-200">
+                                    <Text variant="caption" className="font-bold text-orange-800 uppercase tracking-widest mb-2">Primary Focus Area</Text>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Text variant="h2" className="text-gray-900">{recommendation.focusArea.replace('_', ' ')}</Text>
+                                        <Badge variant="error" className="bg-red-100 text-red-700">Needs Work</Badge>
+                                    </div>
+                                    <Text className="text-sm text-gray-700 leading-relaxed mb-4">
+                                        {recommendation.reasoning}
+                                    </Text>
+                                </Card>
+
+                                <div className="space-y-3">
+                                    <Text variant="h4" className="text-sm uppercase text-gray-400 font-bold tracking-widest">Recommended Plan</Text>
+                                    {recommendation.recommendedCourseId && (
+                                        <div className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 cursor-pointer hover:border-orange-500 transition-colors shadow-sm">
+                                            <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                                                {(() => {
+                                                    const c = MOCK_COURSES.find(co => co.id === recommendation.recommendedCourseId);
+                                                    return c ? <img src={c.thumbnailUrl} className="w-full h-full object-cover" /> : <div className="bg-gray-800 w-full h-full"/>
+                                                })()}
+                                            </div>
+                                            <div className="flex-1">
+                                                <Badge variant="info" className="text-[10px] py-0 mb-1">Course</Badge>
+                                                <Text variant="body" className="font-bold text-sm leading-tight mb-1">
+                                                    {MOCK_COURSES.find(co => co.id === recommendation.recommendedCourseId)?.title}
+                                                </Text>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -327,18 +471,22 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                     <Button fullWidth variant="ghost" onClick={onClose}>Cancel</Button>
                 )}
                 {step === 'INPUT_DATA' && (
-                    <Button fullWidth onClick={handleSubmitData} icon={<Icons.ArrowRight />}>Analyze Data</Button>
+                    <Button fullWidth onClick={processData} icon={<Icons.ArrowRight />}>Analyze Data</Button>
                 )}
                 {step === 'RECOMMENDATION' && (
                     <Button 
                         fullWidth 
                         onClick={() => {
-                            onComplete(stats);
+                            if (source === 'SHOT_DOCTOR') {
+                                // Add to Bag of Shots logic would go here
+                            } else {
+                                onComplete(sgStats);
+                            }
                             onClose();
                         }} 
                         variant="primary"
                     >
-                        Save & Start Practice
+                        {source === 'SHOT_DOCTOR' ? 'Save Shot' : 'Save & Start Practice'}
                     </Button>
                 )}
             </div>
