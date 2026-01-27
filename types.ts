@@ -1,6 +1,7 @@
+
 // Golf Domain Types
 
-export type ClubCategory = 'PUTTER' | 'WEDGE' | 'IRON' | 'WOOD'; // Reordered: Green to Tee
+export type ClubCategory = 'PUTTER' | 'WEDGE' | 'IRON' | 'WOOD';
 export type ClubType = 'PUTTER' | 'LW' | 'SW' | 'GW' | 'PW' | 'IRON-9' | 'IRON-8' | 'IRON-7' | 'IRON-6' | 'IRON-5' | 'IRON-4' | 'IRON-3' | 'HYBRID' | '5-WOOD' | '3-WOOD' | 'DRIVER';
 
 export interface Club {
@@ -8,8 +9,12 @@ export interface Club {
     name: string;
     category: ClubCategory;
     type: ClubType;
+    brand?: string;
+    model?: string;
     loft?: string;
     shaft?: string;
+    purchaseDate?: Date;
+    notes?: string;
 }
 
 export type ShotShape = 'DRAW' | 'FADE' | 'STRAIGHT' | 'HOOK' | 'SLICE' | 'PUSH' | 'PULL';
@@ -25,12 +30,11 @@ export interface SwingMetrics {
     launchAngle?: number;
     path?: number;
     faceToPath?: number;
-    faceAngle?: number; // Added for D-Plane
-    attackAngle?: number; // Added for D-Plane
-    // Short Game Specifics
+    faceAngle?: number; 
+    attackAngle?: number;
     launchDirection?: number;
-    skidDistance?: number; // Putting
-    rollDistance?: number; // Putting
+    skidDistance?: number;
+    rollDistance?: number;
 }
 
 // Data Import Types
@@ -47,7 +51,7 @@ export interface StrokesGainedStats {
 
 export interface RecommendationEngine {
     focusArea: 'DRIVING' | 'IRON_PLAY' | 'SHORT_GAME' | 'PUTTING';
-    recommendedDrills: string[]; // Drill IDs
+    recommendedDrills: string[]; 
     recommendedCourseId?: string;
     reasoning: string;
 }
@@ -59,12 +63,12 @@ export type ShotTrajectory = 'LOW' | 'STANDARD' | 'HIGH';
 export interface BagShotSlot {
     id: string;
     title: string;
-    distanceRange: string; // e.g. "150-175y"
+    distanceRange: string;
     lie: ShotLie;
     shape: ShotShape;
     trajectory: ShotTrajectory;
     isMastered: boolean;
-    videoUrl?: string; // Proof of mastery
+    videoUrl?: string;
     masteryDate?: Date;
 }
 
@@ -90,12 +94,13 @@ export interface UserProfile {
     stats: {
         roundsPlayed: number;
         avgScore: number;
-        fairwaysHit: number; // percentage
-        greensInRegulation: number; // percentage
+        fairwaysHit: number; 
+        greensInRegulation: number; 
         puttsPerRound: number;
     };
     bag: Club[];
     swingDNA: SwingDNA;
+    coachId?: string;
 }
 
 // Analysis Types
@@ -107,7 +112,7 @@ export type KeyframeType = 'ADDRESS' | 'TAKEAWAY' | 'TOP' | 'DOWNSWING' | 'IMPAC
 export interface Keyframe {
     id: string;
     type: KeyframeType;
-    timestamp: number; // in seconds
+    timestamp: number; 
     thumbnail?: string;
 }
 
@@ -124,19 +129,19 @@ export interface SkeletonConfig {
 export interface DrawnAnnotation {
     id: string;
     type: ToolType;
-    points: { x: number; y: number }[]; // Normalized 0-1 coordinates
+    points: { x: number; y: number }[]; 
     color: string;
     strokeWidth: number;
 }
 
 export interface FeedbackMessage {
     id: string;
-    timestamp: number; // Related to video timestamp
+    timestamp: number; 
     text: string;
     severity: 'INFO' | 'WARNING' | 'CRITICAL';
     category: 'POSTURE' | 'GRIP' | 'TEMPO' | 'PLANE' | 'ROTATION';
-    correction?: string; // Drill ID or text
-    audioUrl?: string; // Optional TTS override
+    correction?: string; 
+    audioUrl?: string; 
 }
 
 export interface PoseLandmark {
@@ -157,13 +162,14 @@ export interface SwingAnalysis {
     videoUrl: string;
     thumbnailUrl: string;
     clubUsed: ClubType;
-    tags: string[]; // e.g. "Bunker", "Good Tempo"
+    tags: string[]; 
     metrics: SwingMetrics;
     feedback: FeedbackMessage[];
     keyframes: Keyframe[];
     poseData?: PoseFrame[];
     annotations?: DrawnAnnotation[];
-    score: number; // 0-100
+    score: number;
+    folderId?: string;
 }
 
 // Learning Types
@@ -171,7 +177,7 @@ export interface SwingAnalysis {
 export interface DrillStep {
     order: number;
     text: string;
-    duration?: number; // seconds
+    duration?: number; 
 }
 
 export interface Drill {
@@ -179,13 +185,12 @@ export interface Drill {
     title: string;
     description: string;
     difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-    category: 'PUTTING' | 'CHIPPING' | 'BUNKER' | 'SHORT_GAME' | 'FULL_SWING' | 'MENTAL'; // Reordered & Expanded
+    category: 'PUTTING' | 'CHIPPING' | 'BUNKER' | 'SHORT_GAME' | 'FULL_SWING' | 'MENTAL';
     steps: DrillStep[];
     thumbnailUrl: string;
     durationMinutes: number;
 }
 
-// Enhanced Course Types - Green to Tee Philosophy
 export type CourseCategoryType = 'PUTTING' | 'CHIPPING' | 'PITCHING' | 'SAND' | 'IRON_PLAY' | 'LONG_GAME' | 'DRIVER' | 'QUANT_ANALYSIS';
 
 export interface LessonResource {
@@ -227,9 +232,9 @@ export interface Course {
     instructor: string;
     modules: CourseModule[];
     totalDuration: number;
-    progress: number; // 0-100
-    handicapImpact: number; // e.g. 2.5 strokes gained
-    tagline: string; // e.g. "The Overture"
+    progress: number; 
+    handicapImpact: number; 
+    tagline: string;
 }
 
 export interface LearningPath {
@@ -241,7 +246,6 @@ export interface LearningPath {
     totalCourses: number;
 }
 
-// Legacy compat
 export interface Lesson extends CourseLesson {
     instructor: string;
     chapters: any[]; 
@@ -254,13 +258,13 @@ export interface Lesson extends CourseLesson {
 
 export interface PracticeGoal {
     id: string;
-    title: string; // e.g., "Speed Training"
-    metric: keyof SwingMetrics; // e.g., "clubSpeed"
+    title: string; 
+    metric: keyof SwingMetrics;
     targetValue: number;
     currentValue: number;
     unit: string;
     deadline?: Date;
-    progress: number; // 0-100
+    progress: number;
 }
 
 export interface TrackManSession {
@@ -270,19 +274,66 @@ export interface TrackManSession {
     shotsHit: number;
     club: ClubType;
     avgMetrics: SwingMetrics;
-    bestMetrics: SwingMetrics; // Personal Bests for this session
-    consistencyScore: number; // 0-100, AI calculated dispersion
+    bestMetrics: SwingMetrics;
+    consistencyScore: number;
     notes: string;
+}
+
+// --- NEW PHASE 2 TYPES ---
+
+// On-Course
+export interface OnCourseRound {
+    id: string;
+    courseName: string;
+    date: Date;
+    score: number;
+    par: number;
+    holesPlayed: number;
+    fairwaysHit: number;
+    greensInRegulation: number;
+    putts: number;
+    isCompleted: boolean;
+}
+
+// Fitness
+export interface Workout {
+    id: string;
+    title: string;
+    category: 'STRENGTH' | 'FLEXIBILITY' | 'SPEED' | 'RECOVERY';
+    duration: number; // minutes
+    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    thumbnailUrl: string;
+    exercisesCount: number;
+    completed?: boolean;
+}
+
+// Handicap
+export interface HandicapRecord {
+    id: string;
+    date: Date;
+    index: number;
+    trend: 'UP' | 'DOWN' | 'STABLE';
+    roundsIncluded: number;
+}
+
+// Coach
+export interface CoachProfile {
+    id: string;
+    name: string;
+    title: string;
+    location: string;
+    avatarUrl: string;
+    specialty: string;
+    rate: number;
 }
 
 // System Logs
 export interface ActionLog {
     id: string;
-    type: 'ADD_SWING' | 'ADD_SESSION' | 'UPDATE_GOAL' | 'COMPLETE_LESSON' | 'MASTER_SHOT' | 'AI_CHAT';
+    type: 'ADD_SWING' | 'ADD_SESSION' | 'UPDATE_GOAL' | 'COMPLETE_LESSON' | 'MASTER_SHOT' | 'AI_CHAT' | 'ROUND_COMPLETE' | 'WORKOUT_COMPLETE';
     timestamp: Date;
     details: any;
 }
 
 // App State Types
-export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PROFILE';
-export type AnalysisViewMode = 'CAMERA' | 'REVIEW' | 'COMPARISON';
+export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PLAY' | 'PROFILE';

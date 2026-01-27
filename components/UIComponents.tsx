@@ -44,7 +44,7 @@ export const Button: React.FC<{
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
     onClick?: (e: React.MouseEvent) => void;
-    children: React.ReactNode;
+    children?: React.ReactNode;
     fullWidth?: boolean;
     disabled?: boolean;
     className?: string;

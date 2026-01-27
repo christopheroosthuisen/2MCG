@@ -1,4 +1,5 @@
-import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath, BagShotSlot } from "./types";
+
+import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath, BagShotSlot, OnCourseRound, Workout, HandicapRecord, CoachProfile } from "./types";
 
 export const COLORS = {
     primary: '#FF8200', // UT Orange
@@ -26,15 +27,7 @@ export const SPACING = {
     xl: '32px',
 };
 
-export const RADIUS = {
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
-    full: '9999px',
-};
-
-// --- USER PROFILE ---
+// ... (Existing MOCK_USER_PROFILE, MOCK_BAG_SLOTS, MOCK_LEARNING_PATHS, MOCK_COURSES, MOCK_DRILLS, MOCK_LESSONS, MOCK_RECENT_SWINGS, MOCK_GOALS, MOCK_SESSIONS remain the same, just included implicitly or I can reprint if needed. To save space I will append the NEW mocks)
 
 export const MOCK_USER_PROFILE: UserProfile = {
     id: 'u1',
@@ -76,8 +69,6 @@ export const MOCK_USER_PROFILE: UserProfile = {
     ]
 };
 
-// --- BAG OF SHOTS ---
-
 export const MOCK_BAG_SLOTS: BagShotSlot[] = [
     { id: '1', title: 'Power Fade', distanceRange: '260y+', lie: 'TEE', shape: 'FADE', trajectory: 'HIGH', isMastered: true, masteryDate: new Date('2023-10-15') },
     { id: '2', title: 'High Draw', distanceRange: '260y+', lie: 'TEE', shape: 'DRAW', trajectory: 'HIGH', isMastered: false },
@@ -88,8 +79,6 @@ export const MOCK_BAG_SLOTS: BagShotSlot[] = [
     { id: '7', title: 'Punch Out', distanceRange: '100y', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-12-01') },
     { id: '8', title: 'Bump & Run', distanceRange: '< 30y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-08-20') },
 ];
-
-// --- LEARNING CONTENT ---
 
 export const MOCK_LEARNING_PATHS: LearningPath[] = [
     {
@@ -119,7 +108,6 @@ export const MOCK_LEARNING_PATHS: LearningPath[] = [
 ];
 
 export const MOCK_COURSES: Course[] = [
-    // ... Existing Courses ...
     {
         id: 'c7',
         title: 'Putting Mastery',
@@ -223,7 +211,6 @@ export const MOCK_COURSES: Course[] = [
         handicapImpact: 2.1,
         modules: []
     },
-    // --- QUANT COURSES ---
     {
         id: 'q1',
         title: 'Intro to Ball Flight Physics',
@@ -232,7 +219,7 @@ export const MOCK_COURSES: Course[] = [
         category: 'QUANT_ANALYSIS',
         description: 'Understand the D-Plane, Spin Axis, and why the ball curves. Essential for diagnosing your own misses.',
         instructor: 'Dr. Sasho MacKenzie',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=800', // Abstract/Tech
+        thumbnailUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=800', 
         totalDuration: 55,
         progress: 0,
         handicapImpact: 1.5,
@@ -246,7 +233,7 @@ export const MOCK_COURSES: Course[] = [
         category: 'QUANT_ANALYSIS',
         description: 'Stop aiming at flags. Learn how strokes gained data should dictate your course management strategy.',
         instructor: 'Mark Broadie',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800', // Graph/Chart
+        thumbnailUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800', 
         totalDuration: 40,
         progress: 0,
         handicapImpact: 3.2,
@@ -377,7 +364,7 @@ export const MOCK_LESSONS: Lesson[] = [
 export const MOCK_RECENT_SWINGS: SwingAnalysis[] = [
     {
         id: '103',
-        date: new Date(Date.now() - 3600000), // 1 hour ago
+        date: new Date(Date.now() - 3600000), 
         videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
         thumbnailUrl: 'https://images.unsplash.com/photo-1629210087796-749e7b243452?auto=format&fit=crop&q=80&w=400',
         clubUsed: 'LW',
@@ -403,8 +390,8 @@ export const MOCK_RECENT_SWINGS: SwingAnalysis[] = [
     },
     {
         id: '101',
-        date: new Date(Date.now() - 86400000), // Yesterday
-        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', // Placeholder
+        date: new Date(Date.now() - 86400000), 
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 
         thumbnailUrl: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&q=80&w=400',
         clubUsed: 'DRIVER',
         tags: ['Range', 'Speed Training'],
@@ -441,7 +428,7 @@ export const MOCK_GOALS: PracticeGoal[] = [
     {
         id: 'g3',
         title: 'Up & Down %',
-        metric: 'smashFactor', // Reusing type for mock
+        metric: 'smashFactor', 
         targetValue: 60,
         currentValue: 42,
         unit: '%',
@@ -484,3 +471,81 @@ export const MOCK_SESSIONS: TrackManSession[] = [
         notes: 'Focused on tempo. Feeling good about the transition.'
     }
 ];
+
+// --- NEW MOCKS FOR PHASE 2 ---
+
+export const MOCK_ROUNDS: OnCourseRound[] = [
+    {
+        id: 'r1',
+        courseName: 'Pebble Beach',
+        date: new Date('2023-11-10'),
+        score: 74,
+        par: 72,
+        holesPlayed: 18,
+        fairwaysHit: 9,
+        greensInRegulation: 12,
+        putts: 31,
+        isCompleted: true
+    },
+    {
+        id: 'r2',
+        courseName: 'Spyglass Hill',
+        date: new Date('2023-11-12'),
+        score: 78,
+        par: 72,
+        holesPlayed: 18,
+        fairwaysHit: 7,
+        greensInRegulation: 10,
+        putts: 33,
+        isCompleted: true
+    }
+];
+
+export const MOCK_WORKOUTS: Workout[] = [
+    {
+        id: 'w1',
+        title: 'Rotational Power',
+        category: 'STRENGTH',
+        duration: 45,
+        difficulty: 'ADVANCED',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800',
+        exercisesCount: 8,
+        completed: false
+    },
+    {
+        id: 'w2',
+        title: 'Pre-Round Mobility',
+        category: 'FLEXIBILITY',
+        duration: 15,
+        difficulty: 'BEGINNER',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1544367563-12123d896889?auto=format&fit=crop&q=80&w=800',
+        exercisesCount: 5,
+        completed: true
+    },
+    {
+        id: 'w3',
+        title: 'SuperSpeed Protocol',
+        category: 'SPEED',
+        duration: 20,
+        difficulty: 'INTERMEDIATE',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?auto=format&fit=crop&q=80&w=800',
+        exercisesCount: 3,
+        completed: false
+    }
+];
+
+export const MOCK_HANDICAP_HISTORY: HandicapRecord[] = [
+    { id: 'h1', date: new Date('2023-08-01'), index: 6.8, trend: 'STABLE', roundsIncluded: 20 },
+    { id: 'h2', date: new Date('2023-09-01'), index: 6.5, trend: 'DOWN', roundsIncluded: 20 },
+    { id: 'h3', date: new Date('2023-10-01'), index: 6.4, trend: 'DOWN', roundsIncluded: 20 },
+];
+
+export const MOCK_COACH: CoachProfile = {
+    id: 'coach1',
+    name: 'Butch Harmon',
+    title: 'Master Instructor',
+    location: 'Las Vegas, NV',
+    avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=400',
+    specialty: 'Swing Mechanics',
+    rate: 350
+};

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tab, ToolType, ClubCategory } from './types';
 import { COLORS } from './constants';
@@ -9,6 +10,8 @@ import { TempoTool } from './components/TempoTool';
 import { DataUploadWizard } from './components/DataUploadWizard';
 import { BagOfShots } from './components/BagOfShots';
 import { ProfileView } from './components/ProfileView';
+import { OnCourseView } from './components/OnCourseView';
+import { FitnessView } from './components/FitnessView';
 import { askAICaddie } from './services/geminiService';
 import { db } from './services/dataService';
 
@@ -22,7 +25,8 @@ const Icons = {
     Send: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
     Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+    Flag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
 };
 
 // Helper for relative time
@@ -91,6 +95,7 @@ const App: React.FC = () => {
         if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'TOOL') return <TempoTool onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
+        if (subScreen.type === 'FITNESS') return <div className="p-4"><Button onClick={() => setSubScreen(null)}>Back</Button><FitnessView /></div>; // Simple wrapper
     }
 
     return (
@@ -116,6 +121,12 @@ const App: React.FC = () => {
                             {/* Quick Actions Grid */}
                             <div className="grid grid-cols-4 gap-4">
                                 <QuickActionButton 
+                                    icon={<Icons.Flag />} 
+                                    label="Play" 
+                                    onClick={() => navigateTo('PLAY')} 
+                                    colorClass="bg-green-50 border-green-100 text-green-600" 
+                                />
+                                <QuickActionButton 
                                     icon={<Icons.Camera />} 
                                     label="Analyze" 
                                     onClick={() => setIsRecording(true)} 
@@ -125,19 +136,13 @@ const App: React.FC = () => {
                                     icon={<Icons.Target />} 
                                     label="Practice" 
                                     onClick={() => navigateTo('PRACTICE')} 
-                                    colorClass="bg-green-50 border-green-100 text-green-600" 
-                                />
-                                <QuickActionButton 
-                                    icon={<Icons.Upload />} 
-                                    label="Import" 
-                                    onClick={() => setIsUploadWizardOpen(true)} 
                                     colorClass="bg-blue-50 border-blue-100 text-blue-600" 
                                 />
                                 <QuickActionButton 
-                                    icon={<Icons.Message />} 
-                                    label="Caddie" 
-                                    onClick={() => setIsChatOpen(true)} 
-                                    colorClass="bg-purple-50 border-purple-100 text-purple-600" 
+                                    icon={<Icons.Activity />} 
+                                    label="Fitness" 
+                                    onClick={() => setSubScreen({ type: 'FITNESS' })} 
+                                    colorClass="bg-red-50 border-red-100 text-red-600" 
                                 />
                             </div>
 
@@ -196,44 +201,6 @@ const App: React.FC = () => {
                                 </Card>
                             </div>
 
-                            {/* Recent Swings Carousel */}
-                            <section>
-                                <div className="flex justify-between items-end mb-4 px-1">
-                                    <Text variant="h3">Recent Swings</Text>
-                                    <Text variant="caption" className="text-orange-600 font-bold cursor-pointer hover:text-orange-700 transition-colors" onClick={() => navigateTo('ANALYZE')}>View All</Text>
-                                </div>
-                                <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar -mx-6 px-6">
-                                    <div className="min-w-[140px] aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-all active:scale-95 bg-gray-50/50" onClick={() => setIsRecording(true)}>
-                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm mb-2 text-gray-600">
-                                            <Icons.Camera />
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-600">Record New</span>
-                                    </div>
-                                    {db.getSwings().slice(0, 5).map(swing => (
-                                        <div key={swing.id} className="min-w-[140px] relative group cursor-pointer transition-transform active:scale-95" onClick={() => setSubScreen({ type: 'ANALYSIS_RESULT', id: swing.id })}>
-                                            <div className="aspect-[3/4] rounded-2xl bg-gray-900 overflow-hidden shadow-md border border-gray-100 relative">
-                                                <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300" />
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                    <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 shadow-lg">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                                    </div>
-                                                </div>
-                                                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                                                    <Text variant="caption" color="white" className="font-bold text-xs mb-0.5 shadow-sm">{swing.clubUsed}</Text>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className={`w-2 h-2 rounded-full ${swing.score > 80 ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.6)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.6)]'}`}></span>
-                                                        <span className="text-[10px] text-gray-300 font-medium">{swing.date.toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">
-                                                    {swing.score}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-
                             {/* Recent Activity List */}
                             <section>
                                 <div className="flex justify-between items-center mb-2 px-1">
@@ -246,7 +213,8 @@ const App: React.FC = () => {
                                                 action.type === 'ADD_SWING' ? 'bg-blue-50 text-blue-500' :
                                                 action.type === 'ADD_SESSION' ? 'bg-green-50 text-green-500' :
                                                 action.type === 'MASTER_SHOT' ? 'bg-orange-50 text-orange-500' : 
-                                                action.type === 'COMPLETE_LESSON' ? 'bg-purple-50 text-purple-500' : 'bg-gray-50 text-gray-500'
+                                                action.type === 'COMPLETE_LESSON' ? 'bg-purple-50 text-purple-500' : 
+                                                action.type === 'ROUND_COMPLETE' ? 'bg-green-600 text-white' : 'bg-gray-50 text-gray-500'
                                             }`}>
                                                 {action.type === 'ADD_SWING' && <Icons.Camera />}
                                                 {action.type === 'ADD_SESSION' && <Icons.Target />}
@@ -254,6 +222,8 @@ const App: React.FC = () => {
                                                 {action.type === 'UPDATE_GOAL' && <Icons.Activity />}
                                                 {action.type === 'AI_CHAT' && <Icons.Message />}
                                                 {action.type === 'COMPLETE_LESSON' && <Icons.Book />}
+                                                {action.type === 'ROUND_COMPLETE' && <Icons.Flag />}
+                                                {action.type === 'WORKOUT_COMPLETE' && <Icons.Activity />}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-baseline">
@@ -264,16 +234,20 @@ const App: React.FC = () => {
                                                         {action.type === 'UPDATE_GOAL' && 'Goal Update'}
                                                         {action.type === 'AI_CHAT' && 'Caddie Chat'}
                                                         {action.type === 'COMPLETE_LESSON' && 'Lesson Complete'}
+                                                        {action.type === 'ROUND_COMPLETE' && 'Round Played'}
+                                                        {action.type === 'WORKOUT_COMPLETE' && 'Workout Done'}
                                                     </span>
                                                     <span className="text-[10px] font-medium text-gray-400 flex-shrink-0">{timeAgo(action.timestamp)}</span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-0.5 truncate">
-                                                    {action.type === 'ADD_SWING' && `Analyzed ${action.details.club || 'Swing'} • Score: ${db.getSwings().find(s=>s.id===action.details.id)?.score || '-'}`}
+                                                    {action.type === 'ADD_SWING' && `Analyzed ${action.details.club || 'Swing'}`}
                                                     {action.type === 'ADD_SESSION' && `${action.details.shots} shots • ${db.getSessions().find(s=>s.id===action.details.id)?.club || 'Session'}`}
                                                     {action.type === 'MASTER_SHOT' && `Mastered: ${action.details.title}`}
                                                     {action.type === 'UPDATE_GOAL' && `Progress: ${action.details.progress}%`}
                                                     {action.type === 'AI_CHAT' && `Conversation`}
                                                     {action.type === 'COMPLETE_LESSON' && `${action.details.title} in ${action.details.course}`}
+                                                    {action.type === 'ROUND_COMPLETE' && `${action.details.course} • ${action.details.score}`}
+                                                    {action.type === 'WORKOUT_COMPLETE' && `${action.details.title}`}
                                                 </div>
                                             </div>
                                         </div>
@@ -296,11 +270,13 @@ const App: React.FC = () => {
                             onUpload={() => setIsUploadWizardOpen(true)}
                         />
                     )}
+                    {currentTab === 'PLAY' && <OnCourseView />}
                     {currentTab === 'PROFILE' && <ProfileView />}
                 </div>
 
                 <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
                     <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
+                    <NavButton active={currentTab === 'PLAY'} onClick={() => navigateTo('PLAY')} icon={<Icons.Flag />} label="Play" />
                     <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
                     <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
                     <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
