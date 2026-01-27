@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Text, Button, Card, Input, Badge, ProgressBar } from './UIComponents';
-import { ImportSource, StrokesGainedStats, RecommendationEngine, SwingMetrics } from '../types';
-import { COLORS, MOCK_DRILLS, MOCK_COURSES } from '../constants';
+import React, { useState } from 'react';
+import { Text, Button, Card, Badge } from './UIComponents';
+import { ImportSource, StrokesGainedStats, RecommendationEngine, SwingMetrics, SwingAnalysis } from '../types';
+import { COLORS, MOCK_COURSES } from '../constants';
+import { db } from '../services/dataService';
 
 const Icons = {
     Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-    Check: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="green" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
-    ChevronRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
     Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
     Scan: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>,
     ArrowRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>,
-    Refresh: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>,
-    Eye: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    Eye: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+    ChevronRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 };
 
-// --- GOLF PHYSICS ENGINE (Ported from Python) ---
+// --- GOLF PHYSICS ENGINE ---
 class GolfPhysicsEngine {
     data: SwingMetrics;
     hand: 'Right' | 'Left';
@@ -142,8 +141,6 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
     const [recommendation, setRecommendation] = useState<RecommendationEngine | null>(null);
     const [shotAnalysis, setShotAnalysis] = useState<ShotAnalysisResult | null>(null);
 
-    // --- LOGIC ---
-
     const processData = () => {
         setStep('PROCESSING');
         setTimeout(() => {
@@ -199,7 +196,29 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
         }, 1200);
     };
 
-    // --- COMPONENTS ---
+    const handleComplete = () => {
+        if (source === 'SHOT_DOCTOR' && shotAnalysis) {
+            const newSwing: SwingAnalysis = {
+                id: crypto.randomUUID(),
+                date: new Date(),
+                videoUrl: '', 
+                thumbnailUrl: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&q=80&w=400',
+                clubUsed: 'DRIVER',
+                tags: ['Shot Doctor', 'Manual Entry'],
+                metrics: shotMetrics,
+                feedback: [
+                    ...shotAnalysis.issues.map(i => ({ id: crypto.randomUUID(), timestamp: 0, text: i, severity: 'WARNING' as const, category: 'PLANE' as const })),
+                    ...shotAnalysis.praise.map(p => ({ id: crypto.randomUUID(), timestamp: 0, text: p, severity: 'INFO' as const, category: 'PLANE' as const }))
+                ],
+                keyframes: [],
+                score: Math.max(0, 100 - (shotAnalysis.issues.length * 10))
+            };
+            db.addSwing(newSwing);
+        } else {
+            onComplete(sgStats);
+        }
+        onClose();
+    };
 
     const SourceButton: React.FC<{ 
         id: ImportSource, 
@@ -476,14 +495,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {step === 'RECOMMENDATION' && (
                     <Button 
                         fullWidth 
-                        onClick={() => {
-                            if (source === 'SHOT_DOCTOR') {
-                                // Add to Bag of Shots logic would go here
-                            } else {
-                                onComplete(sgStats);
-                            }
-                            onClose();
-                        }} 
+                        onClick={handleComplete}
                         variant="primary"
                     >
                         {source === 'SHOT_DOCTOR' ? 'Save Shot' : 'Save & Start Practice'}

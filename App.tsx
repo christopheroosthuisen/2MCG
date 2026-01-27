@@ -1,498 +1,371 @@
 import React, { useState } from 'react';
 import { Tab, ToolType, ClubCategory } from './types';
-import { COLORS, MOCK_DRILLS, MOCK_RECENT_SWINGS, MOCK_USER_PROFILE } from './constants';
-import { Text, Button, Card, Badge, ProgressBar } from './components/UIComponents';
-import { VideoRecorder, AnalysisToolbar, SkeletonOverlay, MetricCard, KeyframeMarker } from './components/AnalysisViews';
+import { COLORS } from './constants';
+import { Text, Button, Card, Badge, Input, ProgressBar } from './components/UIComponents';
+import { VideoRecorder, AnalysisResult, AnalyzeView } from './components/AnalysisViews';
 import { LearnSystem } from './components/LearnViews';
 import { PracticeSystem } from './components/PracticeViews';
 import { TempoTool } from './components/TempoTool';
 import { DataUploadWizard } from './components/DataUploadWizard';
 import { BagOfShots } from './components/BagOfShots';
+import { ProfileView } from './components/ProfileView';
+import { askAICaddie } from './services/geminiService';
+import { db } from './services/dataService';
 
-// Icons as simple SVG components
 const Icons = {
-    Home: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
-    Target: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
-    Camera: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
-    Book: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>,
-    User: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
-    Play: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
-    ChevronRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
-    ArrowLeft: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
-    Clock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
-    Plus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
-    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
-    Map: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>,
-    Briefcase: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>,
-    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
-    Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-    TrendUp: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+    Home: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>,
+    Target: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>,
+    Camera: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+    Book: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>,
+    User: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+    Message: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>,
+    Send: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
+    Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+    Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 };
+
+// Helper for relative time
+function timeAgo(date: Date) {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m ago";
+    return Math.floor(seconds) + "s ago";
+}
+
+const QuickActionButton: React.FC<{ icon: React.ReactNode, label: string, onClick: () => void, colorClass: string }> = ({ icon, label, onClick, colorClass }) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-2 group">
+        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-2xl shadow-sm transition-all duration-200 group-hover:scale-105 group-active:scale-95 border ${colorClass}`}>
+            {icon}
+        </div>
+        <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
+    </button>
+);
 
 const App: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<Tab>('HOME');
-    const [subScreen, setSubScreen] = useState<{ type: 'DRILL' | 'ANALYSIS_RESULT' | 'TOOL' | 'BAG', id: string } | null>(null);
+    const [subScreen, setSubScreen] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
-    // Navigation Helper
+    // Get real user data
+    const user = db.getUser();
+
+    // Chat State
+    const [messages, setMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
+    const [input, setInput] = useState('');
+    const [loadingChat, setLoadingChat] = useState(false);
+
+    const handleSendChat = async () => {
+        if (!input.trim()) return;
+        const newMsg = { role: 'user' as const, text: input };
+        setMessages(prev => [...prev, newMsg]);
+        setInput('');
+        setLoadingChat(true);
+        
+        // Use the service to call Gemini with Grounding
+        const response = await askAICaddie(input, messages);
+        setMessages(prev => [...prev, { role: 'model', text: response }]);
+        setLoadingChat(false);
+    };
+
     const navigateTo = (tab: Tab) => {
         setCurrentTab(tab);
         setSubScreen(null);
     };
 
-    const openDrill = (id: string) => setSubScreen({ type: 'DRILL', id });
-    const openAnalysis = (id: string) => setSubScreen({ type: 'ANALYSIS_RESULT', id });
-    const openTempoTool = () => setSubScreen({ type: 'TOOL', id: 'TEMPO' });
-    const openBagOfShots = () => setSubScreen({ type: 'BAG', id: 'MAIN' });
-    const goBack = () => setSubScreen(null);
-
-    // --- SCREEN COMPONENTS ---
-
-    const HomeView = () => (
-        <div className="space-y-6 pb-32">
-            <header className="flex justify-between items-center bg-white p-6 pb-2 -mx-6 -mt-6 sticky top-0 z-10 border-b border-gray-50">
-                <div>
-                    <Text variant="caption" className="font-medium text-gray-500">Welcome back,</Text>
-                    <Text variant="h2" className="text-gray-900">{MOCK_USER_PROFILE.name.split(' ')[0]}</Text>
-                </div>
-                <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigateTo('PROFILE')}>
-                    <img src={MOCK_USER_PROFILE.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                </div>
-            </header>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4">
-                <Card variant="filled" className="bg-orange-50 border-orange-100 relative overflow-hidden cursor-pointer" onClick={() => navigateTo('PRACTICE')}>
-                    <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2">
-                        <Icons.Target />
-                    </div>
-                    <Text variant="metric-label" className="text-orange-700 mb-1">Handicap</Text>
-                    <Text variant="metric" color={COLORS.primary}>
-                        {MOCK_USER_PROFILE.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(MOCK_USER_PROFILE.swingDNA.handicap).toFixed(1)}
-                    </Text>
-                    <div className="flex items-center text-xs text-orange-600 mt-2 font-bold">
-                        <span className="mr-1">↓</span> 0.3 this month
-                    </div>
-                </Card>
-                <Card variant="filled" className="bg-green-50 border-green-100 relative overflow-hidden">
-                    <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2">
-                        <Icons.Target />
-                    </div>
-                    <Text variant="metric-label" className="text-green-800 mb-1">Avg Score</Text>
-                    <Text variant="metric" color={COLORS.secondary}>{MOCK_USER_PROFILE.stats.avgScore}</Text>
-                    <div className="flex items-center text-xs text-green-700 mt-2 font-bold">
-                        Last 5 rounds
-                    </div>
-                </Card>
-            </div>
-
-            {/* Quick Actions */}
-            <section>
-                <Card variant="filled" className="bg-gray-900 text-white relative overflow-hidden cursor-pointer group" onClick={() => setIsRecording(true)}>
-                    <div className="relative z-10">
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 text-orange-400 group-hover:scale-110 transition-transform">
-                            <Icons.Camera />
-                        </div>
-                        <Text variant="h3" color="white" className="mb-1">AI Swing Check</Text>
-                        <Text className="text-gray-400 mb-4 text-sm max-w-[80%]">Record your swing for instant AI analysis of your posture and plane.</Text>
-                        <Button variant="primary" size="sm" className="bg-white text-gray-900 hover:bg-gray-100 border-none">Start Analysis</Button>
-                    </div>
-                    <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8 scale-150">
-                        <Icons.Camera />
-                    </div>
-                </Card>
-            </section>
-
-            {/* Recent Analysis */}
-            <section>
-                <div className="flex justify-between items-center mb-4">
-                    <Text variant="h3">Recent Swings</Text>
-                    <button className="text-sm font-bold text-orange-500 hover:text-orange-600">View All</button>
-                </div>
-                <div className="space-y-3">
-                    {MOCK_RECENT_SWINGS.map(swing => (
-                        <Card key={swing.id} onClick={() => openAnalysis(swing.id)} className="flex gap-4 p-3 hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors">
-                            <div className="w-20 h-24 rounded-xl bg-gray-200 overflow-hidden relative flex-shrink-0 shadow-sm">
-                                <img src={swing.thumbnailUrl} alt="Swing" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                    <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-md">
-                                        <div className="w-4 h-4 text-orange-500 ml-0.5"><Icons.Play /></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex-1 flex flex-col justify-center py-1">
-                                <div className="flex justify-between items-start mb-1">
-                                    <Text variant="h4" className="text-base font-bold">{swing.clubUsed} Swing</Text>
-                                    <Badge variant={swing.score > 80 ? 'success' : 'warning'}>{swing.score}</Badge>
-                                </div>
-                                <Text variant="caption" className="mb-3 text-xs flex items-center gap-1">
-                                    <Icons.Clock /> {swing.date.toLocaleDateString()}
-                                </Text>
-                                <div className="flex items-center gap-4">
-                                    <div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Club Speed</div>
-                                        <div className="text-sm font-bold">{swing.metrics.clubSpeed} <span className="text-[10px] font-normal text-gray-400">mph</span></div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Carry</div>
-                                        <div className="text-sm font-bold">{swing.metrics.carryDistance} <span className="text-[10px] font-normal text-gray-400">yds</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            </section>
-        </div>
-    );
-
-    // --- DETAIL SCREENS ---
-
-    const DrillDetail = ({ drillId }: { drillId: string }) => {
-        const drill = MOCK_DRILLS.find(d => d.id === drillId);
-        if (!drill) return null;
-
-        return (
-            <div className="bg-white min-h-screen pb-24 animate-in slide-in-from-right duration-300">
-                <div className="relative h-64 bg-gray-900">
-                    <img src={drill.thumbnailUrl} className="w-full h-full object-cover opacity-60" />
-                    <button onClick={goBack} className="absolute top-6 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors">
-                        <Icons.ArrowLeft />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                        <Badge variant="info" className="mb-2">{drill.category}</Badge>
-                        <Text variant="h2" color="white" className="mb-1">{drill.title}</Text>
-                        <div className="flex items-center gap-4 text-white/80 text-sm">
-                            <span>{drill.difficulty}</span>
-                            <span>•</span>
-                            <span>{drill.durationMinutes} min</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 space-y-8">
-                    <div>
-                        <Text variant="h4" className="mb-2">Description</Text>
-                        <Text color="gray">{drill.description}</Text>
-                    </div>
-
-                    <div>
-                        <Text variant="h4" className="mb-4">Steps</Text>
-                        <div className="space-y-4">
-                            {drill.steps.map((step, idx) => (
-                                <div key={idx} className="flex gap-4">
-                                    <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold flex-shrink-0 mt-0.5">
-                                        {step.order}
-                                    </div>
-                                    <div className="pt-1">
-                                        <Text>{step.text}</Text>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 safe-area-bottom">
-                         <Button fullWidth size="lg">Start Session</Button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const AnalysisResult = ({ analysisId }: { analysisId: string }) => {
-        return (
-            <div className="bg-black min-h-screen pb-24 text-white animate-in slide-in-from-right duration-300 flex flex-col">
-                {/* Wrapped in a separate component in AnalysisViews.tsx to manage complex state */}
-                <AnalysisToolbar activeTool={null} onSelectTool={()=>{}} activeColor="" onSelectColor={()=>{}} showSkeleton={false} onToggleSkeleton={()=>{}} onToggleSkeletonSettings={()=>{}} /> 
-                {/* NOTE: We are actually rendering the full AnalysisResult component from AnalysisViews which includes everything */}
-            </div>
-        );
-    };
-
-    const ProfileView = () => (
-        <div className="space-y-6 pb-32 animate-in fade-in duration-500">
-             {/* Profile Header */}
-             <div className="bg-white p-6 -mx-6 -mt-6 pt-12 text-center border-b border-gray-100">
-                 <div className="w-28 h-28 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl relative">
-                     <img src={MOCK_USER_PROFILE.avatarUrl} className="w-full h-full object-cover" />
-                     <div className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white text-white">
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                     </div>
-                 </div>
-                 <Text variant="h2" className="mb-1">{MOCK_USER_PROFILE.name}</Text>
-                 <div className="flex items-center justify-center gap-2 mb-4">
-                     <Badge variant="dark" className="text-[10px] tracking-widest">{MOCK_USER_PROFILE.memberStatus}</Badge>
-                     <Text variant="caption" className="flex items-center gap-1"><Icons.Map /> {MOCK_USER_PROFILE.homeCourse}</Text>
-                 </div>
-                 
-                 <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto mt-6">
-                     <div className="text-center">
-                         <div className="text-xl font-bold text-gray-900">{MOCK_USER_PROFILE.stats.roundsPlayed}</div>
-                         <div className="text-[10px] text-gray-400 font-bold uppercase">Rounds</div>
-                     </div>
-                     <div className="text-center border-l border-gray-100">
-                         <div className="text-xl font-bold text-gray-900">{MOCK_USER_PROFILE.stats.fairwaysHit}%</div>
-                         <div className="text-[10px] text-gray-400 font-bold uppercase">FIR</div>
-                     </div>
-                     <div className="text-center border-l border-gray-100">
-                         <div className="text-xl font-bold text-gray-900">{MOCK_USER_PROFILE.stats.greensInRegulation}%</div>
-                         <div className="text-[10px] text-gray-400 font-bold uppercase">GIR</div>
-                     </div>
-                     <div className="text-center border-l border-gray-100">
-                         <div className="text-xl font-bold text-gray-900">{MOCK_USER_PROFILE.stats.puttsPerRound}</div>
-                         <div className="text-[10px] text-gray-400 font-bold uppercase">Putts</div>
-                     </div>
-                 </div>
-             </div>
-
-             {/* Swing DNA */}
-             <div className="px-1">
-                 <Text variant="h3" className="mb-3 px-1">Swing DNA</Text>
-                 <div className="grid grid-cols-2 gap-3">
-                     <Card variant="filled" className="flex items-center justify-between p-4 bg-white border border-gray-200">
-                         <div>
-                             <div className="text-xs text-gray-400 uppercase font-bold mb-1">Driver Speed</div>
-                             <div className="text-2xl font-bold">{MOCK_USER_PROFILE.swingDNA.driverSpeed} <span className="text-sm font-normal text-gray-500">mph</span></div>
-                         </div>
-                         <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
-                             <Icons.Activity />
-                         </div>
-                     </Card>
-                     <Card variant="filled" className="flex items-center justify-between p-4 bg-white border border-gray-200">
-                         <div>
-                             <div className="text-xs text-gray-400 uppercase font-bold mb-1">7-Iron Carry</div>
-                             <div className="text-2xl font-bold">{MOCK_USER_PROFILE.swingDNA.ironCarry7} <span className="text-sm font-normal text-gray-500">yds</span></div>
-                         </div>
-                         <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
-                             <Icons.Target />
-                         </div>
-                     </Card>
-                     <Card variant="filled" className="flex items-center justify-between p-4">
-                         <div>
-                             <div className="text-xs text-gray-400 uppercase font-bold mb-1">Tempo</div>
-                             <div className="text-lg font-bold">{MOCK_USER_PROFILE.swingDNA.tempo}</div>
-                         </div>
-                     </Card>
-                     <Card variant="filled" className="flex items-center justify-between p-4">
-                         <div>
-                             <div className="text-xs text-gray-400 uppercase font-bold mb-1">Shot Shape</div>
-                             <div className="text-lg font-bold">{MOCK_USER_PROFILE.swingDNA.typicalShape}</div>
-                         </div>
-                     </Card>
-                 </div>
-             </div>
-
-             {/* What's In The Bag */}
-             <div className="px-1">
-                 <div className="flex justify-between items-center mb-3 px-1">
-                     <Text variant="h3">What's In The Bag</Text>
-                     <Button size="sm" variant="ghost" className="text-orange-500 font-bold text-xs">Edit Bag</Button>
-                 </div>
-                 <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
-                     {(['WOOD', 'IRON', 'WEDGE', 'PUTTER'] as ClubCategory[]).map((category, idx) => {
-                         const categoryClubs = MOCK_USER_PROFILE.bag.filter(c => c.category === category);
-                         if (categoryClubs.length === 0) return null;
-                         
-                         return (
-                             <div key={category} className={`p-5 ${idx !== 0 ? 'border-t border-gray-100' : ''}`}>
-                                 <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                     <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                     {category}S
-                                 </div>
-                                 <div className="space-y-3">
-                                     {categoryClubs.map(club => (
-                                         <div key={club.id} className="flex justify-between items-center">
-                                             <div>
-                                                 <div className="font-bold text-gray-900">{club.type}</div>
-                                                 <div className="text-xs text-gray-500">{club.name} {club.loft && `• ${club.loft}`}</div>
-                                             </div>
-                                             {club.shaft && (
-                                                 <div className="text-xs text-gray-400 font-mono text-right max-w-[120px] truncate">{club.shaft}</div>
-                                             )}
-                                         </div>
-                                     ))}
-                                 </div>
-                             </div>
-                         );
-                     })}
-                 </div>
-             </div>
-
-             {/* Settings Links */}
-             <div className="space-y-2 pt-4">
-                <Card variant="outlined" className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <Icons.Settings />
-                        <span className="font-bold text-gray-700">App Settings</span>
-                    </div>
-                    <Icons.ChevronRight />
-                </Card>
-                <Card variant="outlined" className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <Icons.Briefcase />
-                        <span className="font-bold text-gray-700">Subscription & Billing</span>
-                    </div>
-                    <Icons.ChevronRight />
-                </Card>
-                <div className="pt-4 px-4">
-                    <Button variant="ghost" fullWidth className="text-red-500 hover:bg-red-50">Log Out</Button>
-                    <Text align="center" variant="caption" className="mt-4 text-xs text-gray-300">Version 2.4.0 (Build 1042)</Text>
-                </div>
-            </div>
-        </div>
-    );
-
-    // --- MAIN RENDER LOGIC ---
-
     if (isRecording) {
-        return (
-            <VideoRecorder 
-                onAnalysisComplete={(res) => {
-                    setIsRecording(false);
-                    // In a real app, we'd navigate to the new analysis ID
-                    openAnalysis('101'); 
-                }} 
-                onCancel={() => setIsRecording(false)} 
-            />
-        );
+        return <VideoRecorder onAnalysisComplete={(res) => { setIsRecording(false); setSubScreen({ type: 'ANALYSIS_RESULT', id: res.id }); }} onCancel={() => setIsRecording(false)} />;
     }
 
     if (subScreen) {
-        if (subScreen.type === 'DRILL') return <DrillDetail drillId={subScreen.id} />;
-        if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} />;
-        if (subScreen.type === 'TOOL' && subScreen.id === 'TEMPO') return <TempoTool onBack={goBack} />;
-        if (subScreen.type === 'BAG') return <BagOfShots onBack={goBack} />;
+        if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} />;
+        if (subScreen.type === 'TOOL') return <TempoTool onBack={() => setSubScreen(null)} />;
+        if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
     }
 
     return (
         <div className="min-h-screen bg-[#F5F5F7] text-[#4B4B4B] font-sans selection:bg-orange-100">
             <main className="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto px-6 hide-scrollbar">
-                    {currentTab === 'HOME' && <HomeView />}
-                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={openTempoTool} onOpenBagOfShots={openBagOfShots} />}
+                <div className="flex-1 overflow-y-auto px-6 hide-scrollbar pb-24">
+                    {currentTab === 'HOME' && (
+                        <div className="space-y-8 pt-6 pb-8">
+                            {/* Header */}
+                            <header className="flex justify-between items-center px-1">
+                                <div>
+                                    <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-0.5">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
+                                    <Text variant="h2" className="text-gray-900 leading-tight">Hello, {user.name.split(' ')[0]}</Text>
+                                </div>
+                                <div className="relative group">
+                                    <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer transition-transform group-hover:scale-105" onClick={() => navigateTo('PROFILE')}>
+                                        <img src={user.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                                </div>
+                            </header>
+
+                            {/* Quick Actions Grid */}
+                            <div className="grid grid-cols-4 gap-4">
+                                <QuickActionButton 
+                                    icon={<Icons.Camera />} 
+                                    label="Analyze" 
+                                    onClick={() => setIsRecording(true)} 
+                                    colorClass="bg-orange-50 border-orange-100 text-orange-600" 
+                                />
+                                <QuickActionButton 
+                                    icon={<Icons.Target />} 
+                                    label="Practice" 
+                                    onClick={() => navigateTo('PRACTICE')} 
+                                    colorClass="bg-green-50 border-green-100 text-green-600" 
+                                />
+                                <QuickActionButton 
+                                    icon={<Icons.Upload />} 
+                                    label="Import" 
+                                    onClick={() => setIsUploadWizardOpen(true)} 
+                                    colorClass="bg-blue-50 border-blue-100 text-blue-600" 
+                                />
+                                <QuickActionButton 
+                                    icon={<Icons.Message />} 
+                                    label="Caddie" 
+                                    onClick={() => setIsChatOpen(true)} 
+                                    colorClass="bg-purple-50 border-purple-100 text-purple-600" 
+                                />
+                            </div>
+
+                            {/* AI Insight / Report Widget */}
+                            <div className="relative group cursor-pointer">
+                                <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl transform rotate-1 opacity-50 blur-sm group-hover:rotate-2 transition-transform"></div>
+                                <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-6 opacity-10"><Icons.Activity /></div>
+                                    <div className="flex items-start gap-4 relative z-10">
+                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400 border border-white/10 backdrop-blur-md flex-shrink-0">
+                                            <span className="text-xl">💡</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <Text variant="h4" color="white" className="text-xs font-bold uppercase tracking-wider mb-1 text-gray-400">AI Insight</Text>
+                                            <Text className="text-base font-medium leading-snug mb-3">Your driver spin rate is averaging 2900rpm (+400 vs target). Try teeing the ball slightly higher.</Text>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" className="text-xs h-8 px-3 border-gray-600 text-gray-300 hover:bg-white/5 hover:text-white hover:border-gray-400">View Data</Button>
+                                                <Button size="sm" variant="primary" className="text-xs h-8 px-3 bg-orange-600 hover:bg-orange-500 border-none shadow-orange-900/20">Fix It</Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Key Stats Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100">
+                                    <div className="absolute right-[-20px] top-[-20px] bg-green-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
+                                    <div>
+                                        <Text variant="caption" className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Handicap</Text>
+                                        <div className="flex items-baseline gap-2 mt-1">
+                                            <Text variant="h1" className="text-4xl">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
+                                            <span className="text-green-600 text-[10px] font-bold bg-green-100 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                                <span className="text-xs">↓</span> 0.2
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mt-2">
+                                        <div className="bg-green-500 h-full w-[70%] rounded-full"></div>
+                                    </div>
+                                    <Text className="text-[10px] text-gray-400 mt-2 font-medium">Top 5% of users</Text>
+                                </Card>
+                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100">
+                                    <div className="absolute right-[-20px] top-[-20px] bg-orange-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
+                                    <div>
+                                        <Text variant="caption" className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Active Goal</Text>
+                                        <Text variant="h3" className="text-lg leading-tight mt-1 line-clamp-2 min-h-[3rem]">{db.getGoals()[0]?.title || 'Set Goal'}</Text>
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
+                                            <span>Progress</span>
+                                            <span>{db.getGoals()[0]?.progress || 0}%</span>
+                                        </div>
+                                        <ProgressBar progress={db.getGoals()[0]?.progress || 0} className="h-1.5" />
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Recent Swings Carousel */}
+                            <section>
+                                <div className="flex justify-between items-end mb-4 px-1">
+                                    <Text variant="h3">Recent Swings</Text>
+                                    <Text variant="caption" className="text-orange-600 font-bold cursor-pointer hover:text-orange-700 transition-colors" onClick={() => navigateTo('ANALYZE')}>View All</Text>
+                                </div>
+                                <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar -mx-6 px-6">
+                                    <div className="min-w-[140px] aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-all active:scale-95 bg-gray-50/50" onClick={() => setIsRecording(true)}>
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm mb-2 text-gray-600">
+                                            <Icons.Camera />
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-600">Record New</span>
+                                    </div>
+                                    {db.getSwings().slice(0, 5).map(swing => (
+                                        <div key={swing.id} className="min-w-[140px] relative group cursor-pointer transition-transform active:scale-95" onClick={() => setSubScreen({ type: 'ANALYSIS_RESULT', id: swing.id })}>
+                                            <div className="aspect-[3/4] rounded-2xl bg-gray-900 overflow-hidden shadow-md border border-gray-100 relative">
+                                                <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300" />
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                    <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 shadow-lg">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                                                    <Text variant="caption" color="white" className="font-bold text-xs mb-0.5 shadow-sm">{swing.clubUsed}</Text>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={`w-2 h-2 rounded-full ${swing.score > 80 ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.6)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.6)]'}`}></span>
+                                                        <span className="text-[10px] text-gray-300 font-medium">{swing.date.toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">
+                                                    {swing.score}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                            {/* Recent Activity List */}
+                            <section>
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <Text variant="h3">Activity Log</Text>
+                                </div>
+                                <div className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100">
+                                    {db.getRecentActions().slice(0, 5).map((action, i) => (
+                                        <div key={action.id} className={`flex gap-4 items-center p-3 rounded-2xl transition-colors hover:bg-gray-50 ${i !== db.getRecentActions().slice(0,5).length-1 ? 'border-b border-gray-50' : ''}`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm text-lg border border-gray-100/50 ${
+                                                action.type === 'ADD_SWING' ? 'bg-blue-50 text-blue-500' :
+                                                action.type === 'ADD_SESSION' ? 'bg-green-50 text-green-500' :
+                                                action.type === 'MASTER_SHOT' ? 'bg-orange-50 text-orange-500' : 
+                                                action.type === 'COMPLETE_LESSON' ? 'bg-purple-50 text-purple-500' : 'bg-gray-50 text-gray-500'
+                                            }`}>
+                                                {action.type === 'ADD_SWING' && <Icons.Camera />}
+                                                {action.type === 'ADD_SESSION' && <Icons.Target />}
+                                                {action.type === 'MASTER_SHOT' && <div className="font-bold">★</div>}
+                                                {action.type === 'UPDATE_GOAL' && <Icons.Activity />}
+                                                {action.type === 'AI_CHAT' && <Icons.Message />}
+                                                {action.type === 'COMPLETE_LESSON' && <Icons.Book />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-sm font-bold text-gray-900 truncate pr-2">
+                                                        {action.type === 'ADD_SWING' && 'Swing Analysis'}
+                                                        {action.type === 'ADD_SESSION' && 'Practice Session'}
+                                                        {action.type === 'MASTER_SHOT' && 'Shot Mastered'}
+                                                        {action.type === 'UPDATE_GOAL' && 'Goal Update'}
+                                                        {action.type === 'AI_CHAT' && 'Caddie Chat'}
+                                                        {action.type === 'COMPLETE_LESSON' && 'Lesson Complete'}
+                                                    </span>
+                                                    <span className="text-[10px] font-medium text-gray-400 flex-shrink-0">{timeAgo(action.timestamp)}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                                                    {action.type === 'ADD_SWING' && `Analyzed ${action.details.club || 'Swing'} • Score: ${db.getSwings().find(s=>s.id===action.details.id)?.score || '-'}`}
+                                                    {action.type === 'ADD_SESSION' && `${action.details.shots} shots • ${db.getSessions().find(s=>s.id===action.details.id)?.club || 'Session'}`}
+                                                    {action.type === 'MASTER_SHOT' && `Mastered: ${action.details.title}`}
+                                                    {action.type === 'UPDATE_GOAL' && `Progress: ${action.details.progress}%`}
+                                                    {action.type === 'AI_CHAT' && `Conversation`}
+                                                    {action.type === 'COMPLETE_LESSON' && `${action.details.title} in ${action.details.course}`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {db.getRecentActions().length === 0 && (
+                                        <div className="text-center py-8 text-gray-400 italic text-sm">
+                                            No activity yet. Start practicing!
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
+                    )}
+                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} />}
                     {currentTab === 'LEARN' && <LearnSystem />}
                     {currentTab === 'ANALYZE' && (
-                        <div className="space-y-8 pb-32 animate-in fade-in duration-500 pt-6">
-                             {/* Analyze Header */}
-                             <div className="px-1">
-                                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Analysis Center</Text>
-                                <Text variant="h1" className="mb-2">Swing & Data</Text>
-                                <Text variant="body" color="gray">Capture your swing or import data for AI analysis.</Text>
-                             </div>
-
-                             {/* Swing Capture Section */}
-                             <section>
-                                <Text variant="h3" className="mb-4 px-1">Swing Capture</Text>
-                                <div className="space-y-4">
-                                    <Card variant="filled" className="bg-gray-900 text-white relative overflow-hidden cursor-pointer group" onClick={() => setIsRecording(true)}>
-                                        <div className="relative z-10 flex flex-col items-center text-center py-6">
-                                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 text-orange-400 group-hover:scale-110 transition-transform">
-                                                <Icons.Camera />
-                                            </div>
-                                            <Text variant="h2" color="white" className="mb-1">Record Swing</Text>
-                                            <Text className="text-gray-400 text-sm">Real-time AI skeleton & plane analysis</Text>
-                                        </div>
-                                    </Card>
-                                    
-                                    <Card variant="outlined" className="cursor-pointer hover:bg-gray-50 flex items-center justify-center py-4 border-dashed border-2 border-gray-300">
-                                        <div className="flex items-center gap-3 text-gray-500">
-                                            <Icons.Plus />
-                                            <span className="font-bold">Upload Video from Gallery</span>
-                                        </div>
-                                    </Card>
-                                </div>
-                             </section>
-
-                             {/* Data Studio Section (Moved from Practice) */}
-                             <section>
-                                <Text variant="h3" className="mb-4 px-1">Data Studio</Text>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Card 
-                                        variant="outlined" 
-                                        className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-orange-200 hover:bg-orange-50 group transition-all"
-                                        onClick={() => setIsUploadWizardOpen(true)}
-                                    >
-                                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                            <Icons.Upload />
-                                        </div>
-                                        <Text variant="h4" className="text-base">Upload Data</Text>
-                                        <Text variant="caption" className="text-xs mt-1">TrackMan / GCQuad</Text>
-                                    </Card>
-                                    <Card variant="outlined" className="flex flex-col items-center justify-center py-6 text-center cursor-pointer hover:border-green-200 hover:bg-green-50 group transition-all">
-                                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                            <Icons.TrendUp />
-                                        </div>
-                                        <Text variant="h4" className="text-base">AI Analysis</Text>
-                                        <Text variant="caption" className="text-xs mt-1">Session Insights</Text>
-                                    </Card>
-                                </div>
-                             </section>
-                        </div>
+                        <AnalyzeView 
+                            onRecord={() => setIsRecording(true)}
+                            onSelectSwing={(id) => setSubScreen({ type: 'ANALYSIS_RESULT', id })}
+                            onUpload={() => setIsUploadWizardOpen(true)}
+                        />
                     )}
                     {currentTab === 'PROFILE' && <ProfileView />}
                 </div>
 
-                {/* Bottom Navigation */}
-                <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 pb-8 flex justify-between items-center z-50 safe-area-bottom shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.05)]">
-                    <NavButton 
-                        active={currentTab === 'HOME'} 
-                        onClick={() => navigateTo('HOME')} 
-                        icon={<Icons.Home />} 
-                        label="Home" 
-                    />
-                    <NavButton 
-                        active={currentTab === 'PRACTICE'} 
-                        onClick={() => navigateTo('PRACTICE')} 
-                        icon={<Icons.Target />} 
-                        label="Practice" 
-                    />
-                    <NavButton 
-                        active={currentTab === 'ANALYZE'} 
-                        onClick={() => navigateTo('ANALYZE')} 
-                        icon={<Icons.Camera />} 
-                        label="Analyze" 
-                    />
-                    <NavButton 
-                        active={currentTab === 'LEARN'} 
-                        onClick={() => navigateTo('LEARN')} 
-                        icon={<Icons.Book />} 
-                        label="Learn" 
-                    />
-                    <NavButton 
-                        active={currentTab === 'PROFILE'} 
-                        onClick={() => navigateTo('PROFILE')} 
-                        icon={<Icons.User />} 
-                        label="Profile" 
-                    />
+                <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
+                    <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
+                    <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
+                    <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
+                    <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
+                    <NavButton active={currentTab === 'PROFILE'} onClick={() => navigateTo('PROFILE')} icon={<Icons.User />} label="Profile" />
                 </nav>
 
-                {/* Overlays */}
-                {isUploadWizardOpen && (
-                    <DataUploadWizard 
-                        onClose={() => setIsUploadWizardOpen(false)}
-                        onComplete={(stats) => {
-                            console.log("Stats imported:", stats);
-                            // In real app, save to user profile
-                        }}
-                    />
+                {/* AI Caddie Floating Button */}
+                <button 
+                    onClick={() => setIsChatOpen(true)}
+                    className="absolute bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-orange-600 transition-colors z-40 hover:scale-105 active:scale-95"
+                >
+                    <Icons.Message />
+                </button>
+
+                {/* AI Caddie Chat Overlay */}
+                {isChatOpen && (
+                    <div className="absolute inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-bottom duration-300">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 safe-area-top">
+                            <div>
+                                <Text variant="h4">AI Caddie</Text>
+                                <Text variant="caption" className="text-xs">Powered by Gemini 3 Pro • Search • Maps</Text>
+                            </div>
+                            <button onClick={() => setIsChatOpen(false)} className="p-2 text-gray-500"><Icons.Close /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {messages.length === 0 && (
+                                <div className="text-center text-gray-400 mt-20">
+                                    <p>Ask me about course rules, local weather, or strategy.</p>
+                                    <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                        <button onClick={() => setInput("What's the weather at Pebble Beach?")} className="text-xs bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 transition-colors">Weather @ Pebble</button>
+                                        <button onClick={() => setInput("Explain the new drop rule")} className="text-xs bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 transition-colors">Drop Rules</button>
+                                    </div>
+                                </div>
+                            )}
+                            {messages.map((m, i) => (
+                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                                        {m.text}
+                                    </div>
+                                </div>
+                            ))}
+                            {loadingChat && <div className="text-xs text-gray-400 ml-4 animate-pulse">Thinking...</div>}
+                        </div>
+                        <div className="p-4 border-t border-gray-100 safe-area-bottom">
+                            <div className="flex gap-2">
+                                <Input 
+                                    value={input} 
+                                    onChange={(e) => setInput(e.target.value)} 
+                                    placeholder="Ask your caddie..." 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                                />
+                                <Button onClick={handleSendChat} disabled={loadingChat} className="px-3"><Icons.Send /></Button>
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                {isUploadWizardOpen && <DataUploadWizard onClose={() => setIsUploadWizardOpen(false)} onComplete={() => {}} />}
             </main>
         </div>
     );
 };
 
-const NavButton: React.FC<{
-    active: boolean;
-    onClick: () => void;
-    icon: React.ReactNode;
-    label: string;
-}> = ({ active, onClick, icon, label }) => (
-    <button 
-        onClick={onClick}
-        className={`flex flex-col items-center gap-1 transition-all duration-200 w-14 ${active ? 'text-[#FF8200] -translate-y-1' : 'text-gray-400 hover:text-gray-600'}`}
-    >
+const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; }> = ({ active, onClick, icon, label }) => (
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all w-14 ${active ? 'text-[#FF8200] -translate-y-1' : 'text-gray-400 hover:text-gray-600'}`}>
         <div className={`w-6 h-6 ${active ? 'stroke-[2.5px]' : ''}`}>{icon}</div>
         <span className={`text-[10px] font-bold ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
     </button>

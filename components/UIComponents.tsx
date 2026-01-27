@@ -1,5 +1,5 @@
 import React from 'react';
-import { COLORS, RADIUS } from '../constants';
+import { COLORS } from '../constants';
 
 // Typography
 export const Text: React.FC<{
@@ -8,8 +8,9 @@ export const Text: React.FC<{
     children: React.ReactNode;
     className?: string;
     align?: 'left' | 'center' | 'right';
-}> = ({ variant = 'body', color, children, className = '', align = 'left' }) => {
-    const baseStyle = "font-sans";
+    onClick?: () => void;
+}> = ({ variant = 'body', color, children, className = '', align = 'left', onClick }) => {
+    const baseStyle = "font-sans transition-colors";
     let variantStyle = "";
 
     switch (variant) {
@@ -25,11 +26,13 @@ export const Text: React.FC<{
 
     const colorStyle = color ? "" : (variant === 'caption' || variant === 'metric-label' ? '' : 'text-gray-900');
     const alignStyle = `text-${align}`;
+    const cursorStyle = onClick ? "cursor-pointer hover:opacity-80" : "";
 
     return (
         <div 
-            className={`${baseStyle} ${variantStyle} ${colorStyle} ${alignStyle} ${className}`} 
+            className={`${baseStyle} ${variantStyle} ${colorStyle} ${alignStyle} ${cursorStyle} ${className}`} 
             style={{ color: color }}
+            onClick={onClick}
         >
             {children}
         </div>
@@ -110,7 +113,7 @@ export const Card: React.FC<{
 }> = ({ variant = 'elevated', children, className = '', onClick }) => {
     let base = "rounded-3xl p-5 transition-all duration-300";
     if (variant === 'elevated') base += " bg-white shadow-lg shadow-gray-200/50 hover:shadow-xl hover:shadow-gray-200/60";
-    if (variant === 'outlined') base += " bg-white border border-gray-100";
+    if (variant === 'outlined') base += " bg-white border border-gray-200";
     if (variant === 'filled') base += " bg-gray-50 border border-transparent";
     if (variant === 'glass') base += " bg-white/80 backdrop-blur-md border border-white/20 shadow-sm";
     
@@ -140,7 +143,7 @@ export const Badge: React.FC<{
     }
 
     return (
-        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${colorClass} ${className}`}>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${colorClass} ${className}`}>
             {children}
         </span>
     );
@@ -183,12 +186,12 @@ export const Tabs: React.FC<{
     className?: string;
 }> = ({ tabs, activeTab, onTabChange, className = '' }) => {
     return (
-        <div className={`flex border-b border-gray-200 ${className}`}>
+        <div className={`flex border-b border-gray-200 overflow-x-auto hide-scrollbar ${className}`}>
             {tabs.map((tab) => (
                 <button
                     key={tab}
                     onClick={() => onTabChange(tab)}
-                    className={`pb-3 px-1 mr-6 text-sm font-bold uppercase tracking-wide transition-all border-b-2 ${
+                    className={`pb-3 px-1 mr-6 text-sm font-bold uppercase tracking-wide transition-all border-b-2 whitespace-nowrap ${
                         activeTab === tab 
                         ? `border-[${COLORS.primary}] text-gray-900` 
                         : 'border-transparent text-gray-400 hover:text-gray-600'

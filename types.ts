@@ -275,6 +275,14 @@ export interface TrackManSession {
     notes: string;
 }
 
+// System Logs
+export interface ActionLog {
+    id: string;
+    type: 'ADD_SWING' | 'ADD_SESSION' | 'UPDATE_GOAL' | 'COMPLETE_LESSON' | 'MASTER_SHOT' | 'AI_CHAT';
+    timestamp: Date;
+    details: any;
+}
+
 // App State Types
 export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PROFILE';
 export type AnalysisViewMode = 'CAMERA' | 'REVIEW' | 'COMPARISON';

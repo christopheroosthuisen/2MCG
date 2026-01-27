@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { PracticeGoal, TrackManSession, Drill } from '../types';
-import { COLORS, MOCK_GOALS, MOCK_SESSIONS, MOCK_RECENT_SWINGS, MOCK_DRILLS } from '../constants';
+import { PracticeGoal, TrackManSession, Drill, SwingAnalysis } from '../types';
+import { COLORS } from '../constants';
 import { Text, Card, Badge, ProgressBar, Button, Input, Tabs } from './UIComponents';
 import { MetricCard } from './AnalysisViews';
+import { db } from '../services/dataService';
 
 const Icons = {
     Plus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
@@ -83,6 +84,23 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    const handleEndSession = () => {
+        // Save Session to DB
+        const newSession: TrackManSession = {
+            id: crypto.randomUUID(),
+            date: new Date(),
+            location: 'The Lab',
+            shotsHit: shots,
+            club: 'DRIVER', // Defaulting for now
+            avgMetrics: {},
+            bestMetrics: {},
+            consistencyScore: 85, 
+            notes: `Session duration: ${formatTime(seconds)}`
+        };
+        db.addSession(newSession);
+        onClose();
+    };
+
     if (isMinimized) {
          return (
             <div className="bg-orange-500 text-white rounded-full px-4 py-2 shadow-lg flex items-center justify-between gap-4 cursor-pointer" onClick={() => setIsMinimized(false)}>
@@ -132,7 +150,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 >
                     {isActive ? 'Pause Timer' : 'Resume'}
                 </Button>
-                <Button variant="danger" onClick={onClose} icon={<Icons.Stop />}>
+                <Button variant="danger" onClick={handleEndSession} icon={<Icons.Stop />}>
                     End
                 </Button>
             </div>
@@ -144,8 +162,13 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
     // Short Game Filtering State
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
 
+    const goals = db.getGoals();
+    const primaryGoal = goals[0];
+    const drills = db.getDrills();
+    const sessions = db.getSessions();
+
     // Logic to filter the Short Game & Putting Drills
-    const filteredDrills = MOCK_DRILLS.filter(d => {
+    const filteredDrills = drills.filter(d => {
         if (drillFilter === 'ALL') {
             return d.category === 'PUTTING' || d.category === 'CHIPPING' || d.category === 'BUNKER' || d.category === 'SHORT_GAME';
         }
@@ -158,36 +181,38 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
     return (
         <div className="space-y-8">
             {/* Active Goal Highlight */}
-            <section>
-                <div className="flex justify-between items-center mb-4 px-1">
-                    <Text variant="h3">Primary Focus</Text>
-                    <Text variant="caption" className="text-orange-600 font-bold cursor-pointer">Edit Goal</Text>
-                </div>
-                <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
-                    <div className="absolute right-0 top-0 p-8 opacity-5">
-                         <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
+            {primaryGoal && (
+                <section>
+                    <div className="flex justify-between items-center mb-4 px-1">
+                        <Text variant="h3">Primary Focus</Text>
+                        <Text variant="caption" className="text-orange-600 font-bold cursor-pointer">Edit Goal</Text>
                     </div>
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <Text variant="caption" className="text-gray-400 uppercase font-bold tracking-wider mb-1">Current Target</Text>
-                                <Text variant="h2" color="white">{MOCK_GOALS[0].title}</Text>
+                    <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
+                        <div className="absolute right-0 top-0 p-8 opacity-5">
+                            <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
+                        </div>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <Text variant="caption" className="text-gray-400 uppercase font-bold tracking-wider mb-1">Current Target</Text>
+                                    <Text variant="h2" color="white">{primaryGoal.title}</Text>
+                                </div>
+                                <Badge variant="success">On Track</Badge>
                             </div>
-                            <Badge variant="success">On Track</Badge>
+                            
+                            <div className="flex items-end gap-2 mb-2">
+                                <Text variant="metric" color="white" className="text-5xl">{primaryGoal.currentValue}</Text>
+                                <Text variant="h4" className="text-gray-400 mb-2">/ {primaryGoal.targetValue} {primaryGoal.unit}</Text>
+                            </div>
+                            
+                            <ProgressBar progress={primaryGoal.progress} color={COLORS.primary} className="bg-gray-700 h-2 mb-2" />
+                            <Text variant="caption" className="text-gray-400 text-xs">
+                                +2 {primaryGoal.unit} this week • {30} days remaining
+                            </Text>
                         </div>
-                        
-                        <div className="flex items-end gap-2 mb-2">
-                            <Text variant="metric" color="white" className="text-5xl">{MOCK_GOALS[0].currentValue}</Text>
-                            <Text variant="h4" className="text-gray-400 mb-2">/ {MOCK_GOALS[0].targetValue} {MOCK_GOALS[0].unit}</Text>
-                        </div>
-                        
-                        <ProgressBar progress={MOCK_GOALS[0].progress} color={COLORS.primary} className="bg-gray-700 h-2 mb-2" />
-                        <Text variant="caption" className="text-gray-400 text-xs">
-                            +2 {MOCK_GOALS[0].unit} this week • {30} days remaining
-                        </Text>
-                    </div>
-                </Card>
-            </section>
+                    </Card>
+                </section>
+            )}
             
             {/* Tools Section (Tempo Trainer & Bag of Shots) */}
             <section>
@@ -299,7 +324,7 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
             <section>
                 <Text variant="h3" className="mb-4 px-1">Recent Sessions</Text>
                 <div className="space-y-4">
-                    {MOCK_SESSIONS.map((session) => (
+                    {sessions.slice(0, 3).map((session) => (
                         <Card key={session.id} className="p-4 cursor-pointer hover:bg-gray-50 border border-gray-100">
                             <div className="flex justify-between items-start mb-3">
                                 <div>
@@ -322,19 +347,19 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
                             <div className="grid grid-cols-4 gap-2 mb-3 bg-gray-50 p-2 rounded-xl">
                                 <div className="text-center">
                                     <div className="text-[10px] text-gray-400 font-bold">SPD</div>
-                                    <div className="font-bold text-gray-800">{session.avgMetrics.clubSpeed}</div>
+                                    <div className="font-bold text-gray-800">{session.avgMetrics.clubSpeed || '-'}</div>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-[10px] text-gray-400 font-bold">CRY</div>
-                                    <div className="font-bold text-gray-800">{session.avgMetrics.carryDistance}</div>
+                                    <div className="font-bold text-gray-800">{session.avgMetrics.carryDistance || '-'}</div>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-[10px] text-gray-400 font-bold">SPN</div>
-                                    <div className="font-bold text-gray-800">{session.avgMetrics.spinRate}</div>
+                                    <div className="font-bold text-gray-800">{session.avgMetrics.spinRate || '-'}</div>
                                 </div>
                                 <div className="text-center border-l border-gray-200">
                                     <div className="text-[10px] text-green-600 font-bold">MAX</div>
-                                    <div className="font-bold text-green-700">{session.bestMetrics.clubSpeed}</div>
+                                    <div className="font-bold text-green-700">{session.bestMetrics.clubSpeed || '-'}</div>
                                 </div>
                             </div>
 
@@ -345,6 +370,9 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
                             )}
                         </Card>
                     ))}
+                    {sessions.length === 0 && (
+                        <div className="text-center py-8 text-gray-400 text-sm">No practice sessions logged yet.</div>
+                    )}
                 </div>
             </section>
         </div>
@@ -352,6 +380,8 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
 };
 
 const GoalsView: React.FC = () => {
+    const goals = db.getGoals();
+
     return (
         <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
@@ -366,7 +396,7 @@ const GoalsView: React.FC = () => {
                 </div>
             </div>
 
-            {MOCK_GOALS.map((goal) => (
+            {goals.map((goal) => (
                 <Card key={goal.id} className="p-5 border-l-4 border-l-orange-500">
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -391,6 +421,8 @@ const GoalsView: React.FC = () => {
 };
 
 const HistoryView: React.FC = () => {
+    const sessions = db.getSessions();
+
     return (
         <div className="space-y-4">
              <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
@@ -401,8 +433,7 @@ const HistoryView: React.FC = () => {
                 ))}
             </div>
             
-            {/* Reusing dashboard cards for now, normally would be a list view */}
-             {MOCK_SESSIONS.map((session) => (
+             {sessions.map((session) => (
                 <div key={session.id} className="flex gap-4 items-center p-3 border-b border-gray-100 last:border-0">
                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex flex-col items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-gray-500">{session.date.toLocaleDateString(undefined, {month:'short'})}</span>
@@ -414,8 +445,8 @@ const HistoryView: React.FC = () => {
                             <Text variant="caption" className="font-mono">{session.shotsHit} shots</Text>
                         </div>
                         <div className="flex gap-3 mt-1">
-                            <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Avg Speed: <b>{session.avgMetrics.clubSpeed}</b></span>
-                            <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Best: <b>{session.bestMetrics.clubSpeed}</b></span>
+                            {session.avgMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Avg Speed: <b>{session.avgMetrics.clubSpeed}</b></span>}
+                            {session.bestMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Best: <b>{session.bestMetrics.clubSpeed}</b></span>}
                         </div>
                      </div>
                      <Icons.ChevronRight />
@@ -426,6 +457,8 @@ const HistoryView: React.FC = () => {
 };
 
 const SwingLibraryView: React.FC = () => {
+    const swings = db.getSwings();
+
     return (
         <div className="grid grid-cols-2 gap-4">
             {/* Upload New */}
@@ -434,7 +467,7 @@ const SwingLibraryView: React.FC = () => {
                 <span className="text-xs font-bold mt-2">Add Swing</span>
             </div>
 
-            {MOCK_RECENT_SWINGS.map((swing) => (
+            {swings.map((swing) => (
                 <div key={swing.id} className="aspect-[3/4] rounded-2xl bg-gray-900 relative overflow-hidden group cursor-pointer">
                     <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

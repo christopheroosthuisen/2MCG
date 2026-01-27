@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Course, CourseCategoryType, CourseLesson } from '../types';
-import { COLORS, MOCK_COURSES, MOCK_LEARNING_PATHS } from '../constants';
+import { COLORS, MOCK_LEARNING_PATHS } from '../constants';
 import { Text, Card, Badge, ProgressBar, Button, Tabs } from './UIComponents';
+import { db } from '../services/dataService';
 
 const Icons = {
     Play: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
@@ -35,6 +36,11 @@ export const LearnSystem: React.FC = () => {
     const handleBack = () => {
         if (view === 'LESSON_PLAYER') {
             setView('COURSE_DETAIL');
+            // Ensure selectedCourse is fresh from DB to reflect progress
+            if (selectedCourse) {
+                const updatedCourse = db.getCourses().find(c => c.id === selectedCourse.id);
+                if (updatedCourse) setSelectedCourse(updatedCourse);
+            }
             setSelectedLesson(null);
         } else {
             setView('DASHBOARD');
@@ -51,13 +57,16 @@ export const LearnSystem: React.FC = () => {
 
 const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = ({ onSelectCourse }) => {
     const [categoryFilter, setCategoryFilter] = useState<CourseCategoryType | 'ALL'>('ALL');
+    
+    // Use DB courses instead of Mock constant to ensure progress tracking works
+    const courses = db.getCourses();
 
     const filteredCourses = categoryFilter === 'ALL' 
-        ? MOCK_COURSES 
-        : MOCK_COURSES.filter(c => c.category === categoryFilter);
+        ? courses 
+        : courses.filter(c => c.category === categoryFilter);
 
     // Filter for Quant courses for specific section
-    const quantCourses = MOCK_COURSES.filter(c => c.category === 'QUANT_ANALYSIS');
+    const quantCourses = courses.filter(c => c.category === 'QUANT_ANALYSIS');
 
     return (
         <div className="space-y-8 pb-32 animate-in fade-in duration-500">
@@ -86,7 +95,7 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                                 <Text className="text-sm text-gray-500 line-clamp-2 mb-3">{path.description}</Text>
                                 <Button size="sm" variant="outline" fullWidth onClick={() => {
                                     // In real app, navigate to path detail. Here we just open the first course of the path
-                                    const firstCourse = MOCK_COURSES.find(c => c.id === path.courseIds[0]);
+                                    const firstCourse = courses.find(c => c.id === path.courseIds[0]);
                                     if(firstCourse) onSelectCourse(firstCourse);
                                 }}>Start Path</Button>
                             </div>
@@ -276,6 +285,11 @@ const CourseDetail: React.FC<{ course: Course; onBack: () => void; onSelectLesso
 const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () => void }> = ({ course, lesson, onBack }) => {
     const [activeTab, setActiveTab] = useState('STUDIO');
 
+    const handleComplete = () => {
+        db.completeLesson(course.id, lesson.id);
+        onBack();
+    };
+
     return (
         <div className="bg-black min-h-screen text-white flex flex-col animate-in fade-in duration-300">
             {/* Video Player Placeholder */}
@@ -363,7 +377,16 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
                             )}
 
                             <div className="pt-4 pb-20">
-                                <Button fullWidth variant="primary" className="shadow-orange-200 shadow-lg">Mark as Complete</Button>
+                                {!lesson.completed && (
+                                    <Button fullWidth variant="primary" className="shadow-orange-200 shadow-lg" onClick={handleComplete}>
+                                        Mark as Complete
+                                    </Button>
+                                )}
+                                {lesson.completed && (
+                                    <Button fullWidth variant="ghost" className="bg-green-50 text-green-600 border-green-100" onClick={onBack}>
+                                        Lesson Completed
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     )}

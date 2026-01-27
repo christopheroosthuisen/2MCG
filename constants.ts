@@ -1,4 +1,4 @@
-import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath } from "./types";
+import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath, BagShotSlot } from "./types";
 
 export const COLORS = {
     primary: '#FF8200', // UT Orange
@@ -75,6 +75,19 @@ export const MOCK_USER_PROFILE: UserProfile = {
         { id: 'c13', name: 'Newport 2 GSS', category: 'PUTTER', type: 'PUTTER', loft: '3.5°', shaft: 'Ping Blackout' }
     ]
 };
+
+// --- BAG OF SHOTS ---
+
+export const MOCK_BAG_SLOTS: BagShotSlot[] = [
+    { id: '1', title: 'Power Fade', distanceRange: '260y+', lie: 'TEE', shape: 'FADE', trajectory: 'HIGH', isMastered: true, masteryDate: new Date('2023-10-15') },
+    { id: '2', title: 'High Draw', distanceRange: '260y+', lie: 'TEE', shape: 'DRAW', trajectory: 'HIGH', isMastered: false },
+    { id: '3', title: 'Stinger', distanceRange: '220-240y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-11-02') },
+    { id: '4', title: 'Stock 7 Iron', distanceRange: '170-175y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'STANDARD', isMastered: true, masteryDate: new Date('2023-09-10') },
+    { id: '5', title: 'Bunker Blast', distanceRange: '10-20y', lie: 'BUNKER_GREEN', shape: 'STRAIGHT', trajectory: 'HIGH', isMastered: false },
+    { id: '6', title: 'Flop Shot', distanceRange: '< 20y', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'HIGH', isMastered: false },
+    { id: '7', title: 'Punch Out', distanceRange: '100y', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-12-01') },
+    { id: '8', title: 'Bump & Run', distanceRange: '< 30y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-08-20') },
+];
 
 // --- LEARNING CONTENT ---
 

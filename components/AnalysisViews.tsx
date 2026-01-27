@@ -2,8 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button, Text, Card, Badge, ProgressBar } from './UIComponents';
 import { COLORS } from '../constants';
 import { AnalysisStatus, FeedbackMessage, Keyframe, PlaybackSpeed, ToolType, SwingAnalysis, SkeletonConfig } from '../types';
-import { analyzeSwingFrame } from '../services/geminiService';
-import { MOCK_RECENT_SWINGS } from '../constants';
+import { analyzeSwingFrame, generateSpeech } from '../services/geminiService';
+import { db } from '../services/dataService';
 
 // --- ICONS ---
 const Icons = {
@@ -19,11 +19,14 @@ const Icons = {
     Volume2: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>,
     VolumeX: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>,
     Eye: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
-    EyeOff: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+    EyeOff: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>,
+    Camera: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+    Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+    Filter: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
+    Trash: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 };
 
-// --- VIDEO RECORDER (Existing) ---
-// Kept largely the same, just ensured consistency in style
+// --- VIDEO RECORDER ---
 interface VideoRecorderProps {
     onAnalysisComplete: (result: any) => void;
     onCancel: () => void;
@@ -35,7 +38,6 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
     const [status, setStatus] = useState<AnalysisStatus>('IDLE');
     const [recordingTime, setRecordingTime] = useState(0);
     
-    // Setup Camera
     useEffect(() => {
         const startCamera = async () => {
             try {
@@ -77,21 +79,47 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
     const handleRecord = () => {
         setStatus('RECORDING');
         setRecordingTime(0);
+        
+        // Simulating recording for 3 seconds then capturing a frame
         setTimeout(() => {
             setStatus('PROCESSING');
-            setTimeout(() => {
-                processAnalysis();
-            }, 2000);
+            captureAndAnalyze();
         }, 3000);
     };
 
-    const processAnalysis = async () => {
+    const captureAndAnalyze = async () => {
+        if (!videoRef.current) return;
+
+        // Capture frame to canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(videoRef.current, 0, 0);
+        
+        // Get Base64 without data prefix for Gemini
+        const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+
         setStatus('ANALYZING');
         try {
-            const results = await analyzeSwingFrame("mock-data");
+            const results = await analyzeSwingFrame(base64Image);
             setStatus('COMPLETE');
-            onAnalysisComplete(results);
+            const newAnalysis: SwingAnalysis = {
+                id: crypto.randomUUID(),
+                date: new Date(),
+                videoUrl: '', // In real app, upload video blob
+                thumbnailUrl: canvas.toDataURL('image/jpeg'),
+                clubUsed: 'IRON-7',
+                tags: ['AI Analysis'],
+                metrics: {},
+                feedback: results,
+                keyframes: [],
+                score: 85
+            };
+            db.addSwing(newAnalysis);
+            onAnalysisComplete(newAnalysis);
         } catch (e) {
+            console.error(e);
             setStatus('ERROR');
         }
     };
@@ -147,10 +175,10 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
                                 <div className="absolute inset-0 border-4 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
                             </div>
                             <Text color="white" variant="h3" className="mb-2">
-                                {status === 'PROCESSING' ? 'Processing...' : 'AI Analysis'}
+                                {status === 'PROCESSING' ? 'Processing...' : 'Gemini Vision'}
                             </Text>
                             <Text className="text-gray-400 text-sm">
-                                {status === 'PROCESSING' ? 'Preparing high-res video' : 'Identifying biomechanics'}
+                                {status === 'PROCESSING' ? 'Capturing frame' : 'Analyzing biomechanics'}
                             </Text>
                          </div>
                     </div>
@@ -180,8 +208,6 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
 };
 
 // --- PRO VIDEO PLAYER ---
-// This handles the rendering of the video, drawing layer, and configurable skeleton
-
 interface ProVideoPlayerProps {
     src: string;
     overlay?: boolean;
@@ -223,31 +249,39 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
         }
     }, [playbackSpeed]);
 
-    // Live Feedback Engine
+    // Live Feedback Engine with Gemini TTS
     useEffect(() => {
         if (!isPlaying) {
             setCurrentFeedback(null);
             return;
         }
 
-        // Find active feedback for current time window (within 0.5s)
         const feedback = feedbackMessages.find(f => 
             currentTime >= f.timestamp && currentTime < f.timestamp + 1.5
         );
 
         if (feedback && feedback.id !== currentFeedback?.id) {
             setCurrentFeedback(feedback);
-            
-            // TTS Simulation
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(feedback.text);
-                utterance.rate = 1.2;
-                window.speechSynthesis.speak(utterance);
-            }
+            // Use Gemini TTS instead of SpeechSynthesis
+            generateSpeech(feedback.text);
         } else if (!feedback) {
             setCurrentFeedback(null);
         }
     }, [currentTime, isPlaying, feedbackMessages]);
+
+    // Draw Tools Logic (Simplified)
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx && tool) {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            // Clear and just show feedback that tool is active for now
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            
+            // In a real implementation, we would handle mouse/touch events to draw
+        }
+    }, [tool, activeColor]);
 
     return (
         <div className="relative w-full h-full bg-black flex items-center justify-center group">
@@ -258,16 +292,13 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
                 className="max-h-full max-w-full pointer-events-none" 
                 playsInline
                 onTimeUpdate={(e) => onSeek(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => {
-                    // In real app, set duration state here
-                }}
+                loop
             />
 
             {/* Canvas Overlay for Annotations */}
             <canvas 
                 ref={canvasRef}
-                className="absolute inset-0 w-full h-full z-10 cursor-crosshair"
-                // In real app: handleMouseDown, handleMouseMove, etc. to draw
+                className={`absolute inset-0 w-full h-full z-10 ${tool ? 'cursor-crosshair' : 'pointer-events-none'}`}
             />
 
             {/* Dynamic Feedback Overlay */}
@@ -284,7 +315,6 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
             {/* Configurable Skeleton Overlay */}
             {showSkeleton && (
                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-70" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    {/* Torso */}
                     {skeletonConfig.showTorso && (
                         <>
                             <line x1="50" y1="20" x2="50" y2="50" stroke={COLORS.success} strokeWidth="0.5" strokeDasharray="2,1" />
@@ -292,24 +322,18 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
                             <line x1="45" y1="50" x2="55" y2="50" stroke={COLORS.primary} strokeWidth="0.5" />
                         </>
                     )}
-                    
-                    {/* Legs */}
                     {skeletonConfig.showLegs && (
                         <>
                             <line x1="45" y1="50" x2="42" y2="80" stroke="white" strokeWidth="0.5" />
                             <line x1="55" y1="50" x2="58" y2="80" stroke="white" strokeWidth="0.5" />
                         </>
                     )}
-
-                    {/* Arms (Simulated positions) */}
                     {skeletonConfig.showArms && (
                         <>
                             <line x1="40" y1="25" x2="35" y2="45" stroke="cyan" strokeWidth="0.5" />
                             <line x1="60" y1="25" x2="65" y2="45" stroke="cyan" strokeWidth="0.5" />
                         </>
                     )}
-
-                    {/* Head */}
                     {skeletonConfig.showHead && (
                         <circle cx="50" cy="15" r="5" stroke={COLORS.warning} strokeWidth="0.5" fill="none" />
                     )}
@@ -321,12 +345,7 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
                 <div className="absolute top-12 right-4 bg-gray-900/95 border border-gray-700 p-3 rounded-xl z-40 backdrop-blur-md w-40 animate-in fade-in slide-in-from-top-2">
                     <Text variant="caption" className="font-bold uppercase mb-2 text-gray-400 text-[10px]">Joint Visibility</Text>
                     <div className="space-y-1">
-                        {[
-                            { key: 'showHead', label: 'Head' },
-                            { key: 'showTorso', label: 'Torso' },
-                            { key: 'showArms', label: 'Arms' },
-                            { key: 'showLegs', label: 'Legs' }
-                        ].map((item) => (
+                        {[{ key: 'showHead', label: 'Head' }, { key: 'showTorso', label: 'Torso' }, { key: 'showArms', label: 'Arms' }, { key: 'showLegs', label: 'Legs' }].map((item) => (
                             <button 
                                 key={item.key}
                                 onClick={() => toggleSkeletonConfig(item.key as keyof SkeletonConfig)}
@@ -355,10 +374,6 @@ export const ProVideoPlayer: React.FC<ProVideoPlayerProps> = ({
     );
 };
 
-
-// --- ANALYSIS RESULT ---
-// The main container for the review screen
-
 export const AnalysisToolbar: React.FC<{
     activeTool: ToolType | null;
     onSelectTool: (tool: ToolType) => void;
@@ -368,66 +383,30 @@ export const AnalysisToolbar: React.FC<{
     onToggleSkeleton: () => void;
     onToggleSkeletonSettings: () => void;
 }> = ({ activeTool, onSelectTool, activeColor, onSelectColor, showSkeleton, onToggleSkeleton, onToggleSkeletonSettings }) => {
-    const tools: {id: ToolType, icon: string, label: string}[] = [
-        { id: 'POINTER', icon: '👆', label: 'Select' },
-        { id: 'LINE', icon: '📏', label: 'Line' },
-        { id: 'ANGLE', icon: '📐', label: 'Angle' },
-        { id: 'CIRCLE', icon: '⭕', label: 'Circle' },
-        { id: 'GRID', icon: '#️⃣', label: 'Grid' },
+    const tools: {id: ToolType, icon: string}[] = [
+        { id: 'POINTER', icon: '👆' }, { id: 'LINE', icon: '📏' }, { id: 'ANGLE', icon: '📐' }, { id: 'CIRCLE', icon: '⭕' }, { id: 'GRID', icon: '#️⃣' },
     ];
-
     const colors = ['#FF8200', '#10B981', '#EF4444', '#FFFFFF', '#3B82F6'];
 
     return (
-        <div className="bg-[#1F2937] border-t border-gray-700 p-2">
+        <div className="bg-[#1F2937] border-t border-gray-700 p-2 safe-area-bottom">
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2">
                 {tools.map(tool => (
-                    <button 
-                        key={tool.id}
-                        onClick={() => onSelectTool(tool.id)}
-                        className={`flex flex-col items-center justify-center min-w-[48px] h-12 rounded-lg transition-all ${
-                            activeTool === tool.id 
-                                ? 'bg-orange-500 text-white' 
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
-                    >
+                    <button key={tool.id} onClick={() => onSelectTool(tool.id)} className={`flex flex-col items-center justify-center min-w-[48px] h-12 rounded-lg transition-all ${activeTool === tool.id ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
                         <span className="text-lg leading-none">{tool.icon}</span>
                     </button>
                 ))}
-                
                 <div className="w-px h-8 bg-gray-700 mx-1"></div>
-
-                {/* Skeleton Toggle Group */}
                 <div className="flex bg-gray-800 rounded-lg p-0.5">
-                    <button 
-                        onClick={onToggleSkeleton}
-                        className={`flex flex-col items-center justify-center w-10 h-11 rounded-l-lg transition-all ${
-                            showSkeleton 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-transparent text-gray-400 hover:bg-gray-700'
-                        }`}
-                    >
+                    <button onClick={onToggleSkeleton} className={`flex flex-col items-center justify-center w-10 h-11 rounded-l-lg transition-all ${showSkeleton ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-400 hover:bg-gray-700'}`}>
                          <Icons.Layers />
                     </button>
-                    <button 
-                        onClick={onToggleSkeletonSettings}
-                        className="w-6 h-11 border-l border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded-r-lg"
-                    >
-                        <Icons.Settings />
-                    </button>
+                    <button onClick={onToggleSkeletonSettings} className="w-6 h-11 border-l border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 rounded-r-lg"><Icons.Settings /></button>
                 </div>
-
                 <div className="w-px h-8 bg-gray-700 mx-1"></div>
-
-                {/* Color Picker */}
                 <div className="flex gap-2 bg-gray-800 p-2 rounded-lg">
                     {colors.map(c => (
-                        <button
-                            key={c}
-                            onClick={() => onSelectColor(c)}
-                            className={`w-6 h-6 rounded-full border-2 ${activeColor === c ? 'border-white scale-110' : 'border-transparent opacity-70'}`}
-                            style={{ backgroundColor: c }}
-                        />
+                        <button key={c} onClick={() => onSelectColor(c)} className={`w-6 h-6 rounded-full border-2 ${activeColor === c ? 'border-white scale-110' : 'border-transparent opacity-70'}`} style={{ backgroundColor: c }} />
                     ))}
                 </div>
             </div>
@@ -446,290 +425,231 @@ export const TransportControls: React.FC<{
     audioEnabled: boolean;
     toggleAudio: () => void;
 }> = ({ isPlaying, onTogglePlay, speed, onSpeedChange, currentTime, duration, onSeek, audioEnabled, toggleAudio }) => {
-    
-    // Format Time 00:00
-    const formatTime = (t: number) => {
-        const mins = Math.floor(t / 60);
-        const secs = Math.floor(t % 60);
-        const ms = Math.floor((t % 1) * 100);
-        return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-    };
-
     return (
         <div className="bg-[#111827] p-4 border-t border-gray-800">
-            {/* Scrubber */}
             <div className="flex items-center gap-3 mb-4">
-                <span className="text-xs font-mono text-gray-400 min-w-[48px]">{formatTime(currentTime)}</span>
+                <span className="text-xs font-mono text-gray-400 min-w-[48px]">{currentTime.toFixed(2)}</span>
                 <div className="flex-1 relative h-6 flex items-center group">
                     <div className="absolute left-0 right-0 h-1 bg-gray-700 rounded-full"></div>
-                    <div 
-                        className="absolute left-0 h-1 bg-orange-500 rounded-full"
-                        style={{ width: `${(currentTime / Math.max(duration, 1)) * 100}%` }}
-                    ></div>
-                    <input 
-                        type="range" 
-                        min={0} 
-                        max={duration} 
-                        step={0.01}
-                        value={currentTime}
-                        onChange={(e) => onSeek(parseFloat(e.target.value))}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div 
-                        className="absolute h-4 w-4 bg-white rounded-full shadow-md pointer-events-none transition-transform group-hover:scale-125"
-                        style={{ left: `${(currentTime / Math.max(duration, 1)) * 100}%`, transform: 'translateX(-50%)' }}
-                    ></div>
+                    <div className="absolute left-0 h-1 bg-orange-500 rounded-full" style={{ width: `${(currentTime / Math.max(duration, 1)) * 100}%` }}></div>
+                    <input type="range" min={0} max={duration} step={0.01} value={currentTime} onChange={(e) => onSeek(parseFloat(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                 </div>
-                <span className="text-xs font-mono text-gray-500 min-w-[48px]">{formatTime(duration)}</span>
+                <span className="text-xs font-mono text-gray-500 min-w-[48px]">{duration.toFixed(2)}</span>
             </div>
-
-            {/* Buttons */}
             <div className="flex items-center justify-between">
-                {/* Speed Controls */}
                 <div className="flex gap-4 items-center">
-                    <button 
-                        onClick={toggleAudio}
-                        className={`text-gray-400 hover:text-white ${audioEnabled ? 'text-blue-400' : ''}`}
-                    >
-                        {audioEnabled ? <Icons.Volume2 /> : <Icons.VolumeX />}
-                    </button>
-
+                    <button onClick={toggleAudio} className={`text-gray-400 hover:text-white ${audioEnabled ? 'text-blue-400' : ''}`}>{audioEnabled ? <Icons.Volume2 /> : <Icons.VolumeX />}</button>
                     <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
                         {[0.25, 0.5, 1.0].map((s) => (
-                            <button 
-                                key={s}
-                                onClick={() => onSpeedChange(s as PlaybackSpeed)}
-                                className={`px-2 py-1 text-[10px] font-bold rounded ${speed === s ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                            >
-                                {s}x
-                            </button>
+                            <button key={s} onClick={() => onSpeedChange(s as PlaybackSpeed)} className={`px-2 py-1 text-[10px] font-bold rounded ${speed === s ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}>{s}x</button>
                         ))}
                     </div>
                 </div>
-
-                {/* Transport */}
                 <div className="flex items-center gap-6">
-                    <button className="text-gray-400 hover:text-white" onClick={() => onSeek(currentTime - 0.1)}>
-                        <Icons.SkipBack />
-                    </button>
-                    <button 
-                        className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform"
-                        onClick={onTogglePlay}
-                    >
-                        {isPlaying ? <Icons.Pause /> : <Icons.Play />}
-                    </button>
-                    <button className="text-gray-400 hover:text-white" onClick={() => onSeek(currentTime + 0.1)}>
-                        <Icons.SkipForward />
-                    </button>
+                    <button className="text-gray-400 hover:text-white" onClick={() => onSeek(currentTime - 0.1)}><Icons.SkipBack /></button>
+                    <button className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform" onClick={onTogglePlay}>{isPlaying ? <Icons.Pause /> : <Icons.Play />}</button>
+                    <button className="text-gray-400 hover:text-white" onClick={() => onSeek(currentTime + 0.1)}><Icons.SkipForward /></button>
                 </div>
-
-                {/* Frame Step */}
-                <div className="flex gap-2">
-                    <button className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800" onClick={() => onSeek(currentTime - 0.03)}>
-                        -1f
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800" onClick={() => onSeek(currentTime + 0.03)}>
-                        +1f
-                    </button>
-                </div>
+                <div className="flex gap-2"></div>
             </div>
         </div>
     );
 };
 
-// Tagging UI
 export const ShotTagging: React.FC<{ activeTags: string[] }> = ({ activeTags }) => {
-    const commonTags = ['Bunker', 'Flop', 'Bump & Run', 'Pitch', 'Chunk', 'Thin', 'Good Tempo', 'Early Extension'];
-    
     return (
         <div className="p-4 bg-white border-b border-gray-100">
-            <div className="flex items-center gap-2 mb-3 text-gray-500 text-xs font-bold uppercase tracking-wider">
-                <Icons.Tag />
-                Shot Tags
-            </div>
+            <div className="flex items-center gap-2 mb-3 text-gray-500 text-xs font-bold uppercase tracking-wider"><Icons.Tag /> Shot Tags</div>
             <div className="flex flex-wrap gap-2">
-                {commonTags.map(tag => (
-                    <button 
-                        key={tag}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            activeTags.includes(tag)
-                                ? 'bg-orange-100 border-orange-200 text-orange-700'
-                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                    >
-                        {tag}
-                    </button>
+                {['Bunker', 'Flop', 'Good Tempo'].map(tag => (
+                    <button key={tag} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeTags.includes(tag) ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{tag}</button>
                 ))}
-                <button className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-400 hover:text-gray-600">
-                    + Add Tag
-                </button>
             </div>
+        </div>
+    );
+};
+
+export const AnalyzeView: React.FC<{
+    onRecord: () => void;
+    onSelectSwing: (id: string) => void;
+    onUpload: () => void;
+}> = ({ onRecord, onSelectSwing, onUpload }) => {
+    const [filter, setFilter] = useState('ALL');
+    const swings = db.getSwings();
+
+    const filteredSwings = swings.filter(s => {
+        if (filter === 'ALL') return true;
+        const club = s.clubUsed;
+        if (filter === 'DRIVER') return club === 'DRIVER';
+        if (filter === 'IRONS') return club.includes('IRON');
+        if (filter === 'WEDGES') return ['PW','GW','SW','LW'].includes(club);
+        return true;
+    });
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500 pb-32">
+            {/* Header */}
+            <div className="px-1 pt-6 bg-white sticky top-0 z-10 pb-4 shadow-sm">
+                <div className="flex justify-between items-end mb-4 px-4">
+                    <div>
+                        <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Analysis</Text>
+                        <Text variant="h1" className="mb-0">Swing Library</Text>
+                    </div>
+                    <Button size="sm" variant="outline" icon={<Icons.Upload />} onClick={onUpload}>
+                        Import
+                    </Button>
+                </div>
+
+                {/* Filters */}
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4">
+                    {['ALL', 'DRIVER', 'IRONS', 'WEDGES'].map(f => (
+                         <button 
+                            key={f} 
+                            onClick={() => setFilter(f)}
+                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
+                                filter === f 
+                                    ? 'bg-gray-900 text-white border-gray-900' 
+                                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            {f.charAt(0) + f.slice(1).toLowerCase()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-4">
+                <div className="grid grid-cols-2 gap-4">
+                     {/* Record New Card */}
+                     <div 
+                        className="aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-all active:scale-95 bg-gray-50/50 group"
+                        onClick={onRecord}
+                    >
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 text-gray-600 group-hover:scale-110 transition-transform">
+                            <Icons.Camera />
+                        </div>
+                        <span className="text-sm font-bold text-gray-600">Record New</span>
+                    </div>
+
+                    {filteredSwings.map(swing => (
+                         <div key={swing.id} className="relative group cursor-pointer transition-transform active:scale-95" onClick={() => onSelectSwing(swing.id)}>
+                            <div className="aspect-[3/4] rounded-2xl bg-gray-900 overflow-hidden shadow-md border border-gray-100 relative">
+                                <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 shadow-lg">
+                                        <Icons.Play />
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                                    <Text variant="caption" color="white" className="font-bold text-xs mb-0.5 shadow-sm">{swing.clubUsed}</Text>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`w-2 h-2 rounded-full ${swing.score > 80 ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.6)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.6)]'}`}></span>
+                                        <span className="text-[10px] text-gray-300 font-medium">{swing.date.toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                                    </div>
+                                </div>
+                                <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">
+                                    {swing.score}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            {/* Floating Record Button for Mobile */}
+            <button 
+                onClick={onRecord}
+                className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-2 font-bold hover:scale-105 active:scale-95 transition-transform z-30"
+            >
+                <Icons.Camera /> Record Swing
+            </button>
         </div>
     );
 };
 
 export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }> = ({ analysisId, onBack }) => {
-    const swing = MOCK_RECENT_SWINGS.find(s => s.id === analysisId);
-    
-    const [activeTool, setActiveTool] = useState<ToolType | null>(null);
-    const [activeColor, setActiveColor] = useState('#FF8200');
+    const swing = db.getSwings().find(s => s.id === analysisId) || db.getSwings()[0];
     const [isPlaying, setIsPlaying] = useState(false);
-    const [speed, setSpeed] = useState<PlaybackSpeed>(1.0);
     const [currentTime, setCurrentTime] = useState(0);
-    const [splitScreen, setSplitScreen] = useState(false);
-    const [showSkeleton, setShowSkeleton] = useState(false);
-    const [showSkeletonSettings, setShowSkeletonSettings] = useState(false);
     const [audioEnabled, setAudioEnabled] = useState(true);
     
-    // Default skeleton showing all parts
-    const [skeletonConfig, setSkeletonConfig] = useState<SkeletonConfig>({
-        showArms: true,
-        showLegs: true,
-        showTorso: true,
-        showHead: true
-    });
-
-    const toggleSkeletonConfig = (part: keyof SkeletonConfig) => {
-        setSkeletonConfig(prev => ({ ...prev, [part]: !prev[part] }));
-    };
-    
-    // Mock Duration
-    const duration = 3.5;
-
-    if (!swing) return null;
+    // Drawing & Overlay State
+    const [activeTool, setActiveTool] = useState<ToolType | null>(null);
+    const [activeColor, setActiveColor] = useState('#FF8200');
+    const [showSkeleton, setShowSkeleton] = useState(true);
+    const [showSkeletonSettings, setShowSkeletonSettings] = useState(false);
+    const [skeletonConfig, setSkeletonConfig] = useState<SkeletonConfig>({ showArms: true, showLegs: true, showTorso: true, showHead: true });
 
     return (
         <div className="flex flex-col h-full bg-black text-white animate-in slide-in-from-right duration-300 fixed inset-0 z-50">
-            
-            {/* Top Bar */}
             <div className="flex items-center justify-between p-4 bg-[#111827] border-b border-gray-800">
                 <button onClick={onBack} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 </button>
-                
-                <div className="flex items-center gap-4 bg-gray-900 rounded-lg p-1">
-                    <button 
-                        onClick={() => setSplitScreen(false)}
-                        className={`px-3 py-1 text-xs font-bold rounded ${!splitScreen ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-                    >
-                        Single
-                    </button>
-                    <button 
-                        onClick={() => setSplitScreen(true)}
-                        className={`px-3 py-1 text-xs font-bold rounded flex items-center gap-1 ${splitScreen ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-                    >
-                        <Icons.Split /> Split
+                <div className="flex gap-2">
+                    <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full" title="Delete Swing">
+                        <Icons.Trash />
                     </button>
                 </div>
-
-                <button className="text-orange-500 font-bold text-sm">Export</button>
             </div>
-
-            {/* Video Canvas Area */}
             <div className="flex-1 relative flex bg-black overflow-hidden">
-                <div className={`relative h-full ${splitScreen ? 'w-1/2 border-r border-gray-800' : 'w-full'}`}>
-                    <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">YOU</div>
-                    <ProVideoPlayer 
-                        src={swing.videoUrl || ""}
-                        isPlaying={isPlaying}
-                        onTogglePlay={() => setIsPlaying(!isPlaying)}
-                        playbackSpeed={speed}
-                        tool={activeTool}
-                        activeColor={activeColor}
-                        duration={duration}
-                        currentTime={currentTime}
-                        onSeek={setCurrentTime}
-                        showSkeleton={showSkeleton}
-                        skeletonConfig={skeletonConfig}
-                        toggleSkeletonConfig={toggleSkeletonConfig}
-                        showSkeletonSettings={showSkeletonSettings}
-                        setShowSkeletonSettings={setShowSkeletonSettings}
-                        feedbackMessages={audioEnabled ? swing.feedback : []}
-                    />
-                </div>
-                
-                {splitScreen && (
-                    <div className="relative h-full w-1/2 bg-gray-900">
-                         <div className="absolute top-2 left-2 z-20 bg-orange-600 px-2 py-0.5 rounded text-[10px] font-bold text-white border border-white/10">PRO: TIGER</div>
-                         <div className="absolute top-2 right-2 z-20 text-gray-400 cursor-pointer hover:text-white">
-                            <Icons.Settings />
-                         </div>
-                         <ProVideoPlayer 
-                            src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" // Mock Pro Video
-                            isPlaying={isPlaying} // Sync playback
-                            onTogglePlay={() => setIsPlaying(!isPlaying)}
-                            playbackSpeed={speed}
-                            tool={null}
-                            activeColor={activeColor}
-                            duration={duration}
-                            currentTime={currentTime} // Sync time
-                            onSeek={() => {}} 
-                            showSkeleton={showSkeleton}
-                            skeletonConfig={skeletonConfig}
-                            toggleSkeletonConfig={() => {}}
-                            showSkeletonSettings={false}
-                            setShowSkeletonSettings={() => {}}
-                            feedbackMessages={[]}
-                        />
-                    </div>
-                )}
+                <ProVideoPlayer 
+                    src={swing.videoUrl}
+                    isPlaying={isPlaying}
+                    onTogglePlay={() => setIsPlaying(!isPlaying)}
+                    playbackSpeed={1.0}
+                    duration={3.5}
+                    currentTime={currentTime}
+                    onSeek={setCurrentTime}
+                    showSkeleton={showSkeleton}
+                    skeletonConfig={skeletonConfig}
+                    toggleSkeletonConfig={(key) => setSkeletonConfig(prev => ({...prev, [key]: !prev[key]}))}
+                    showSkeletonSettings={showSkeletonSettings}
+                    setShowSkeletonSettings={setShowSkeletonSettings}
+                    feedbackMessages={audioEnabled ? swing.feedback : []}
+                    tool={activeTool}
+                    activeColor={activeColor}
+                />
             </div>
-
-            {/* Transport & Controls */}
-            <TransportControls 
-                isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying(!isPlaying)}
-                speed={speed}
-                onSpeedChange={setSpeed}
-                currentTime={currentTime}
-                duration={duration}
-                onSeek={setCurrentTime}
-                audioEnabled={audioEnabled}
-                toggleAudio={() => setAudioEnabled(!audioEnabled)}
-            />
-
-            {/* Annotation Tools */}
+            
             <AnalysisToolbar 
                 activeTool={activeTool}
                 onSelectTool={setActiveTool}
                 activeColor={activeColor}
                 onSelectColor={setActiveColor}
                 showSkeleton={showSkeleton}
-                onToggleSkeleton={() => {
-                    setShowSkeleton(!showSkeleton);
-                    if (showSkeleton) setShowSkeletonSettings(false);
-                }}
+                onToggleSkeleton={() => setShowSkeleton(!showSkeleton)}
                 onToggleSkeletonSettings={() => setShowSkeletonSettings(!showSkeletonSettings)}
             />
 
-            {/* Data Sheet / Tags */}
+            <TransportControls 
+                isPlaying={isPlaying} onTogglePlay={() => setIsPlaying(!isPlaying)}
+                speed={1.0} onSpeedChange={() => {}}
+                currentTime={currentTime} duration={3.5} onSeek={setCurrentTime}
+                audioEnabled={audioEnabled} toggleAudio={() => setAudioEnabled(!audioEnabled)}
+            />
             <div className="bg-white h-[35%] overflow-y-auto text-gray-900">
                 <ShotTagging activeTags={swing.tags || []} />
-                
                 <div className="p-4">
                     <Text variant="h4" className="mb-3">Swing Metrics</Text>
                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-6 px-6 hide-scrollbar">
                         <MetricCard label="Club Speed" value={swing.metrics.clubSpeed || '-'} unit="mph" />
                         <MetricCard label="Ball Speed" value={swing.metrics.ballSpeed || '-'} unit="mph" />
-                        <MetricCard label="Carry" value={swing.metrics.carryDistance || '-'} unit="yds" />
-                        <MetricCard label="Spin" value={swing.metrics.spinRate || '-'} unit="rpm" />
-                        <MetricCard label="Launch" value={swing.metrics.launchAngle || '-'} unit="deg" />
+                        <MetricCard label="Launch Angle" value={swing.metrics.launchAngle || '-'} unit="deg" />
                     </div>
                     
-                    <div className="mt-4">
-                         <Text variant="h4" className="mb-3">AI Coach</Text>
-                          {swing.feedback.map((fb, i) => (
-                                <Card key={i} variant="filled" className="bg-blue-50 border-l-4 border-blue-500 rounded-l-md mb-2">
-                                    <div className="flex gap-3">
-                                        <div className="pt-1">
-                                            <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">i</div>
-                                        </div>
-                                        <div>
-                                            <Text className="text-sm text-gray-800">{fb.text}</Text>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
+                    <Text variant="h4" className="mb-2 mt-4">AI Feedback</Text>
+                    <div className="space-y-2">
+                        {swing.feedback.map(f => (
+                            <div key={f.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant={f.severity === 'WARNING' ? 'warning' : 'info'}>{f.category}</Badge>
+                                    <span className="text-gray-400 text-xs font-mono">{f.timestamp}s</span>
+                                </div>
+                                <Text>{f.text}</Text>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -737,12 +657,7 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
     );
 };
 
-export const MetricCard: React.FC<{
-    label: string;
-    value: string | number;
-    unit?: string;
-    trend?: 'up' | 'down' | 'neutral';
-}> = ({ label, value, unit, trend }) => (
+export const MetricCard: React.FC<{ label: string; value: string | number; unit?: string; }> = ({ label, value, unit }) => (
     <div className="bg-gray-50 rounded-xl p-3 flex flex-col items-center justify-center min-w-[80px]">
         <span className="text-[10px] uppercase font-bold text-gray-400 mb-1">{label}</span>
         <div className="flex items-baseline">
@@ -752,17 +667,5 @@ export const MetricCard: React.FC<{
     </div>
 );
 
-// --- KEYFRAME MARKER (Existing but unused in new layout, keeping for compat if needed) ---
-export const KeyframeMarker: React.FC<{
-    keyframes: Keyframe[];
-    duration: number;
-    currentTime: number;
-    onSeek: (time: number) => void;
-}> = ({ keyframes, duration, currentTime, onSeek }) => {
-    return null; 
-};
-
-// --- SKELETON OVERLAY (Exporting for compatibility, though used inside Player now) ---
-export const SkeletonOverlay: React.FC = () => {
-    return null;
-};
+export const SkeletonOverlay: React.FC = () => null;
+export const KeyframeMarker: React.FC = () => null;
