@@ -85,7 +85,7 @@ export const Button: React.FC<{
 
     const sizeStyle = size === 'sm' ? "px-4 py-2 text-sm" : size === 'lg' ? "px-8 py-4 text-lg" : "px-6 py-3";
     const widthStyle = fullWidth ? "w-full" : "";
-    const disabledStyle = (disabled || loading) ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer active:scale-[0.98] transition-all duration-200";
+    const disabledStyle = (disabled || loading) ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer active:scale-95 active:brightness-90 transition-all duration-100 shadow-lg active:shadow-md";
 
     return (
         <button
@@ -117,7 +117,7 @@ export const Card: React.FC<{
     if (variant === 'filled') base += " bg-gray-50 border border-transparent";
     if (variant === 'glass') base += " bg-white/80 backdrop-blur-md border border-white/20 shadow-sm";
     
-    if (onClick) base += " cursor-pointer hover:-translate-y-1";
+    if (onClick) base += " cursor-pointer hover:-translate-y-1 hover:shadow-xl active:translate-y-0 active:shadow-lg";
 
     return (
         <div className={`${base} ${className}`} onClick={onClick}>
@@ -201,6 +201,120 @@ export const Tabs: React.FC<{
                     {tab}
                 </button>
             ))}
+        </div>
+    );
+};
+
+// --- NEW COMPONENTS ---
+
+// Skeleton Loader
+export const Skeleton: React.FC<{ variant?: 'text' | 'card' | 'avatar' | 'image', className?: string }> = ({ variant = 'text', className = '' }) => {
+    let base = "animate-pulse bg-gray-200";
+    if (variant === 'text') base += " h-4 w-3/4 rounded";
+    if (variant === 'card') base += " h-32 w-full rounded-2xl";
+    if (variant === 'avatar') base += " h-12 w-12 rounded-full";
+    if (variant === 'image') base += " h-48 w-full rounded-xl";
+
+    return <div className={`${base} ${className}`} />;
+};
+
+// Toggle Switch
+export const Toggle: React.FC<{ checked: boolean; onChange: (checked: boolean) => void }> = ({ checked, onChange }) => {
+    return (
+        <button 
+            className={`w-12 h-7 rounded-full p-1 transition-colors duration-200 ease-in-out ${checked ? 'bg-green-500' : 'bg-gray-300'}`}
+            onClick={() => onChange(!checked)}
+        >
+            <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+        </button>
+    );
+};
+
+// Circular Progress Ring
+export const ProgressRing: React.FC<{ progress: number; size?: number; stroke?: number; color?: string; className?: string }> = ({ progress, size = 60, stroke = 4, color = COLORS.primary, className = '' }) => {
+    const radius = size / 2 - stroke;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (progress / 100) * circumference;
+
+    return (
+        <svg className={`transform -rotate-90 ${className}`} width={size} height={size}>
+            <circle
+                stroke="#E5E7EB"
+                strokeWidth={stroke}
+                fill="transparent"
+                r={radius}
+                cx={size / 2}
+                cy={size / 2}
+            />
+            <circle
+                stroke={color}
+                strokeWidth={stroke}
+                strokeDasharray={`${circumference} ${circumference}`}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                fill="transparent"
+                r={radius}
+                cx={size / 2}
+                cy={size / 2}
+                className="transition-all duration-1000 ease-out"
+            />
+        </svg>
+    );
+};
+
+// Empty State
+export const EmptyState: React.FC<{ 
+    icon: string; 
+    title: string; 
+    description: string; 
+    actionLabel?: string; 
+    onAction?: () => void; 
+}> = ({ icon, title, description, actionLabel, onAction }) => {
+    return (
+        <div className="text-center py-12 px-6 flex flex-col items-center animate-in fade-in duration-500">
+            <div className="text-6xl mb-4 grayscale opacity-50">{icon}</div>
+            <Text variant="h3" className="mb-2">{title}</Text>
+            <Text color="gray" className="mb-6 max-w-xs">{description}</Text>
+            {actionLabel && onAction && (
+                <Button onClick={onAction}>{actionLabel}</Button>
+            )}
+        </div>
+    );
+};
+
+// Quick Action Button
+export const QuickAction: React.FC<{ icon: string; label: string; onClick: () => void }> = ({ icon, label, onClick }) => {
+    return (
+        <button 
+            onClick={onClick}
+            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-200"
+        >
+            <div className="text-2xl">{icon}</div>
+            <span className="text-xs font-bold text-gray-600">{label}</span>
+        </button>
+    );
+};
+
+// Screen Header
+export const ScreenHeader: React.FC<{
+    title: string;
+    subtitle?: string;
+    leftAction?: React.ReactNode;
+    rightAction?: React.ReactNode;
+    sticky?: boolean;
+}> = ({ title, subtitle, leftAction, rightAction, sticky = true }) => {
+    return (
+        <div className={`px-4 pt-6 pb-4 bg-[#F5F5F7] z-20 ${sticky ? 'sticky top-0' : ''}`}>
+            {subtitle && (
+                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">{subtitle}</Text>
+            )}
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    {leftAction}
+                    <Text variant="h1" className="mb-0 leading-none">{title}</Text>
+                </div>
+                <div>{rightAction}</div>
+            </div>
         </div>
     );
 };

@@ -28,8 +28,8 @@ const Icons = {
     Folder: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
 };
 
-// ... (VideoRecorder, ProVideoPlayer, AnalysisToolbar, TransportControls, ShotTagging remain the same - abbreviated for brevity if needed, but keeping existing logic is safer)
-// Assume they are here as in the previous file content... but let's re-include them to ensure consistency as per instruction "fully develop"
+// ... (VideoRecorder remains the same)
+// Assume VideoRecorder is present
 
 interface VideoRecorderProps {
     onAnalysisComplete: (result: any) => void;
@@ -208,12 +208,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({ onAnalysisComplete
     );
 };
 
-// ... (ProVideoPlayer, AnalysisToolbar, TransportControls, ShotTagging, MetricCard components remain the same as previous)
-// To keep file size manageable and avoid repetition, assume they are present.
-// I will include them here condensed for correctness if the user copy-pastes this file entirely.
-
 export const ProVideoPlayer: React.FC<any> = (props) => {
-    // Re-implementation of player for completeness
     const { src, isPlaying, showSkeleton, feedbackMessages, currentTime } = props;
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -248,11 +243,34 @@ export const AnalysisToolbar: React.FC<any> = ({ onSelectTool, activeTool }) => 
     </div>
 );
 
-export const TransportControls: React.FC<any> = ({ isPlaying, onTogglePlay }) => (
-    <div className="bg-[#111827] p-4 border-t border-gray-800 flex justify-center">
-        <button className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center" onClick={onTogglePlay}>
-            {isPlaying ? <Icons.Pause /> : <Icons.Play />}
-        </button>
+export const TransportControls: React.FC<any> = ({ isPlaying, onTogglePlay, currentTime, duration, onSeek, keyframes = [] }) => (
+    <div className="bg-[#111827] p-4 border-t border-gray-800">
+        <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs font-mono text-gray-400 min-w-[48px]">0:00</span>
+            <div className="flex-1 relative h-6 flex items-center group">
+                <div className="absolute left-0 right-0 h-1 bg-gray-700 rounded-full"></div>
+                <div className="absolute left-0 h-1 bg-orange-500 rounded-full" style={{ width: `${(currentTime / Math.max(duration || 3.5, 1)) * 100}%` }}></div>
+                
+                {/* Keyframe Markers */}
+                {keyframes && keyframes.map((kf: any) => (
+                    <div
+                      key={kf.type}
+                      className="absolute w-3 h-3 bg-white rounded-full shadow cursor-pointer border border-gray-900 hover:scale-125 transition-transform"
+                      style={{ left: `${(kf.timestamp / (duration || 3.5)) * 100}%` }}
+                      title={kf.type}
+                      onClick={(e) => { e.stopPropagation(); onSeek(kf.timestamp); }}
+                    />
+                ))}
+
+                <input type="range" min={0} max={duration || 3.5} step={0.01} value={currentTime || 0} onChange={(e) => onSeek && onSeek(parseFloat(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            </div>
+            <span className="text-xs font-mono text-gray-500 min-w-[48px]">{duration || '3.50'}s</span>
+        </div>
+        <div className="flex justify-center">
+            <button className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform" onClick={onTogglePlay}>
+                {isPlaying ? <Icons.Pause /> : <Icons.Play />}
+            </button>
+        </div>
     </div>
 );
 
@@ -390,7 +408,7 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
              </div>
              {/* Controls */}
              <AnalysisToolbar onSelectTool={() => {}} activeTool={null} />
-             <TransportControls isPlaying={isPlaying} onTogglePlay={() => setIsPlaying(!isPlaying)} />
+             <TransportControls isPlaying={isPlaying} onTogglePlay={() => setIsPlaying(!isPlaying)} keyframes={swing.keyframes} />
              {/* Stats */}
              <div className="bg-white h-[35%] overflow-y-auto text-gray-900 p-4">
                  <Text variant="h4">Swing Metrics</Text>

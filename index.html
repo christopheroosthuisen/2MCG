@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -19,6 +20,39 @@
         /* Mobile safe area support */
         .safe-area-bottom {
             padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Animations */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(0.33); opacity: 1; }
+            80%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .screen-enter { animation: slideInRight 0.3s ease-out; }
+        .screen-exit { animation: slideOutRight 0.2s ease-in; }
+        .tab-fade { animation: fadeIn 0.2s ease-out; }
+        .pulse-ring:before {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            display: block;
+            width: 300%; height: 300%;
+            border-radius: 50%;
+            background-color: rgba(59, 130, 246, 0.3);
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            transform: translate(-50%, -50%);
         }
     </style>
   <script type="importmap">

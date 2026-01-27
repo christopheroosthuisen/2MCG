@@ -80,7 +80,7 @@ export interface SwingDNA {
     tempo: 'FAST' | 'MODERATE' | 'SMOOTH';
     typicalShape: ShotShape;
     handicap: number;
-    dexterity: 'RIGHT' | 'LEFT';
+    dexterity: 'Right' | 'Left';
     height: string;
 }
 
@@ -97,10 +97,12 @@ export interface UserProfile {
         fairwaysHit: number; 
         greensInRegulation: number; 
         puttsPerRound: number;
+        streak: number; // New: Daily streak
     };
     bag: Club[];
     swingDNA: SwingDNA;
     coachId?: string;
+    onboardingCompleted: boolean;
 }
 
 // Analysis Types
@@ -172,6 +174,69 @@ export interface SwingAnalysis {
     folderId?: string;
 }
 
+// --- SWING LIBRARY TYPES ---
+
+export interface SwingAngle {
+    name: string;
+    value: number;
+    ideal?: number;
+    tolerance?: number;
+}
+
+export interface KeyPosition {
+    id: string;
+    name: string;
+    frameNumber: number;
+    timestamp: number;
+    angles: SwingAngle[];
+    thumbnail?: string;
+}
+
+export interface Annotation {
+    id: string;
+    type: 'LINE' | 'CIRCLE' | 'ARROW' | 'ANGLE' | 'TEXT';
+    frameNumber: number;
+    points: { x: number; y: number }[];
+    color: string;
+    text?: string;
+}
+
+export interface SwingVideo {
+    id: string;
+    recordedAt: Date;
+    club: string;
+    angle: 'FACE_ON' | 'DOWN_THE_LINE' | 'OTHER';
+    duration: number;
+    thumbnailUrl: string;
+    videoUrl: string;
+    tags: string[];
+    rating: 1 | 2 | 3 | 4 | 5;
+    keyPositions: KeyPosition[];
+    annotations: Annotation[];
+    folderId?: string;
+    notes?: string;
+    aiScore?: number;
+}
+
+export interface VideoFolder {
+    id: string;
+    name: string;
+    color: string;
+    videoCount: number;
+    createdAt: Date;
+}
+
+export interface ProSwing {
+    id: string;
+    playerName: string;
+    tournament?: string;
+    club: string;
+    angle: 'FACE_ON' | 'DOWN_THE_LINE';
+    videoUrl: string;
+    thumbnailUrl: string;
+    keyMetrics: { name: string; value: string }[];
+}
+
 // Learning Types
 
 export interface DrillStep {
@@ -191,7 +256,7 @@ export interface Drill {
     durationMinutes: number;
 }
 
-export type CourseCategoryType = 'PUTTING' | 'CHIPPING' | 'PITCHING' | 'SAND' | 'IRON_PLAY' | 'LONG_GAME' | 'DRIVER' | 'QUANT_ANALYSIS';
+export type CourseCategoryType = 'PUTTING' | 'CHIPPING' | 'PITCHING' | 'SAND' | 'SHORT_GAME' | 'IRON_PLAY' | 'LONG_GAME' | 'DRIVER' | 'QUANT_ANALYSIS';
 
 export interface LessonResource {
     id: string;
@@ -335,5 +400,434 @@ export interface ActionLog {
     details: any;
 }
 
+// --- NEW SOCIAL & STATS TYPES ---
+
+export interface GolfFriend {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    handicap: number;
+    homeCourse: string;
+    status: 'ONLINE' | 'PLAYING' | 'OFFLINE';
+    lastActive: Date;
+    mutualFriends: number;
+    roundsTogether: number;
+}
+
+export interface ActivityItem {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    type: 'ROUND' | 'ACHIEVEMENT' | 'PR' | 'CHALLENGE' | 'TOURNAMENT';
+    timestamp: Date;
+    data: any;
+    likes: number;
+    comments: number;
+    hasLiked: boolean;
+}
+
+export interface Competition {
+    id: string;
+    type: 'STROKE' | 'MATCH' | 'STABLEFORD' | 'SKINS' | 'NASSAU' | 'WOLF';
+    name: string;
+    players: CompetitionPlayer[];
+    status: 'SETUP' | 'IN_PROGRESS' | 'COMPLETE';
+    currentHole: number;
+    stakes?: string;
+}
+
+export interface CompetitionPlayer {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    handicap: number;
+    score: number;
+    thru: number;
+    position: number;
+}
+
+export interface Tournament {
+    id: string;
+    name: string;
+    description: string;
+    format: string;
+    startDate: Date;
+    endDate: Date;
+    entryFee?: number;
+    prize?: string;
+    participants: number;
+    maxParticipants: number;
+    status: 'UPCOMING' | 'ACTIVE' | 'COMPLETE';
+    leaderboard: TournamentEntry[];
+}
+
+export interface TournamentEntry {
+    rank: number;
+    playerId: string;
+    playerName: string;
+    playerAvatar?: string;
+    score: number;
+    roundsPlayed: number;
+    movement: 'UP' | 'DOWN' | 'SAME';
+}
+
+export interface ShareableScorecard {
+    roundId: string;
+    playerName: string;
+    courseName: string;
+    date: Date;
+    score: number;
+    par: number;
+    highlights: string[];
+    stats: {
+        fairways: string;
+        gir: string;
+        putts: number;
+    };
+}
+
+export interface StrokesGained {
+    roundId: string;
+    date: Date;
+    courseName: string;
+    offTheTee: number;
+    approach: number;
+    aroundGreen: number;
+    putting: number;
+    total: number;
+    benchmarkHandicap: number;
+    totalStrokes: number;
+    coursePar: number;
+}
+
+export interface SGBenchmark {
+    handicap: number;
+    offTheTee: number;
+    approach: number;
+    aroundGreen: number;
+    putting: number;
+}
+
+// --- SETTINGS & PREFERENCES TYPES ---
+
+export type MeasurementUnit = 'yards' | 'meters';
+export type TemperatureUnit = 'fahrenheit' | 'celsius';
+export type ThemeMode = 'light' | 'dark' | 'system';
+export type Language = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'ko' | 'zh';
+export type HandPreference = 'right' | 'left';
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'professional';
+export type SubscriptionTier = 'free' | 'premium' | 'pro';
+export type PlayFrequency = 'rarely' | 'monthly' | 'weekly' | 'daily';
+
+export interface AppPreferences {
+  theme: ThemeMode;
+  language: Language;
+  distanceUnit: MeasurementUnit;
+  temperatureUnit: TemperatureUnit;
+  hapticFeedback: boolean;
+  soundEffects: boolean;
+  autoPlayVideos: boolean;
+  defaultCamera: 'front' | 'back';
+  videoQuality: 'low' | 'medium' | 'high';
+  offlineMode: boolean;
+  dataUsage: 'low' | 'standard' | 'unlimited';
+}
+
+export interface PrivacySettings {
+  profileVisibility: 'public' | 'friends' | 'private';
+  showHandicap: boolean;
+  showScores: boolean;
+  showLocation: boolean;
+  shareAnalytics: boolean;
+  personalizationData: boolean;
+  marketingEmails: boolean;
+  partnerOffers: boolean;
+}
+
+export interface LinkedAccount {
+  provider: 'google' | 'apple' | 'facebook' | 'ghin' | 'trackman';
+  email?: string;
+  connected: boolean;
+  lastSynced?: string;
+}
+
+export interface SubscriptionInfo {
+  tier: SubscriptionTier;
+  status: 'active' | 'cancelled' | 'expired' | 'trial';
+  startDate: string;
+  renewalDate?: string;
+  price?: number;
+  billingCycle?: 'monthly' | 'annual';
+  features: string[];
+}
+
+export interface GolfProfile {
+  handicap: number;
+  handicapIndex?: number;
+  skillLevel: SkillLevel;
+  handPreference: HandPreference;
+  averageScore: number;
+  drivingDistance: number;
+  goals: string[];
+  favoriteClub?: string;
+  playFrequency: 'daily' | 'weekly' | 'monthly' | 'occasionally';
+}
+
+// --- ROUND REPLAY TYPES ---
+
+export type ShotResult = 'FAIRWAY' | 'ROUGH' | 'BUNKER' | 'GREEN' | 'WATER' | 'OB' | 'FRINGE';
+export type MissDirection = 'LEFT' | 'RIGHT' | 'SHORT' | 'LONG' | 'ON_TARGET';
+
+export interface GeoLocation {
+  lat: number;
+  lng: number;
+  elevation?: number;
+}
+
+export interface Shot {
+  id: string;
+  holeNumber: number;
+  shotNumber: number;
+  club: string;
+  startLocation: GeoLocation;
+  endLocation: GeoLocation;
+  distance: number;
+  result: ShotResult;
+  shape?: ShotShape;
+  missDirection?: MissDirection;
+  isPenalty?: boolean;
+  notes?: string;
+}
+
+export interface HoleScore {
+  holeNumber: number;
+  par: number;
+  score: number;
+  shots: Shot[];
+  putts: number;
+  fairwayHit?: boolean;
+  greenInRegulation: boolean;
+  upAndDown?: boolean;
+  sandSave?: boolean;
+}
+
+export interface DetailedRound extends OnCourseRound {
+  frontNine: number;
+  backNine: number;
+  courseRating: number;
+  slopeRating: number;
+  tees: string;
+  holes: HoleScore[];
+  stats: RoundStats;
+  conditions?: PlayingConditions;
+  totalScore: number;
+}
+
+export interface RoundStats {
+  fairwaysHit: number;
+  fairwaysTotal: number;
+  greensInRegulation: number;
+  greensTotal: number;
+  totalPutts: number;
+  penalties: number;
+  upAndDowns: number;
+  upAndDownAttempts: number;
+  sandSaves: number;
+  sandSaveAttempts: number;
+  birdiesOrBetter: number;
+  pars: number;
+  bogeys: number;
+  doubleBogeyOrWorse: number;
+  longestDrive: number;
+  avgDriveDistance: number;
+}
+
+export interface PlayingConditions {
+  weather: 'SUNNY' | 'CLOUDY' | 'RAINY' | 'WINDY';
+  temperature: number;
+  windSpeed: number;
+  windDirection: string;
+  altitude: number;
+  humidity: number;
+}
+
+export interface PatternData {
+  club: string;
+  missCount: { left: number; right: number; short: number; long: number };
+  hitRate: number;
+  avgDistance: number;
+  totalShots: number;
+}
+
+export interface TrendAlert {
+  id: string;
+  type: 'WARNING' | 'INFO' | 'POSITIVE';
+  category: string;
+  message: string;
+  rounds: number;
+  stat: string;
+  trend: 'UP' | 'DOWN' | 'STABLE';
+}
+
+// --- PUTTING LAB TYPES ---
+
+export interface PuttingStats {
+    puttsPerRound: number;
+    oneFootMake: number; // percentage
+    threeFootMake: number;
+    sixFootMake: number;
+    tenFootMake: number;
+    fifteenFootMake: number;
+    twentyFootMake: number;
+    firstPuttProximity: number; // average feet from hole on lag putts
+    threeputts: number; // per round
+    totalPutts: number; // all time
+    roundsTracked: number;
+}
+
+export interface GreenReading {
+    slope: number; // percentage (2% = 2)
+    direction: 'LEFT' | 'RIGHT' | 'UPHILL' | 'DOWNHILL' | 'UPHILL_LEFT' | 'UPHILL_RIGHT' | 'DOWNHILL_LEFT' | 'DOWNHILL_RIGHT';
+    distance: number; // feet
+    stimp: number; // green speed
+    aimPoint: number; // inches to aim outside hole
+    breakAmount: number; // total break in inches
+}
+
+export interface PuttingGame {
+    id: string;
+    name: string;
+    description: string;
+    rules: string[];
+    icon: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+}
+
+// --- ONBOARDING TYPES ---
+
+export type OnboardingStep = 'welcome' | 'profile' | 'golf_info' | 'goals' | 'preferences' | 'tour' | 'complete';
+
+export interface OnboardingData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  skillLevel: SkillLevel;
+  handPreference: HandPreference;
+  playFrequency: PlayFrequency;
+  yearsPlaying: number;
+  goals: string[];
+  focusAreas: string[];
+  distanceUnit: 'yards' | 'meters';
+  notifications: boolean;
+  shareProgress: boolean;
+  handicap?: number;
+}
+
+// --- NOTIFICATION TYPES ---
+
+export type NotificationType = 'achievement' | 'reminder' | 'social' | 'tournament' | 'lesson' | 'weather' | 'practice' | 'system' | 'coaching' | 'milestone';
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type NotificationStatus = 'unread' | 'read' | 'archived';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string;
+  status: NotificationStatus;
+  priority: NotificationPriority;
+  actionUrl?: string;
+  actionLabel?: string;
+  imageUrl?: string;
+}
+
+export interface NotificationPreference {
+  type: NotificationType;
+  enabled: boolean;
+  push: boolean;
+  email: boolean;
+  inApp: boolean;
+  sound: boolean;
+  vibrate: boolean;
+}
+
+// --- ON COURSE TYPES ---
+
+export interface Hazard {
+  id: string;
+  type: 'WATER' | 'BUNKER' | 'OB' | 'PENALTY_AREA';
+  name: string;
+  carryDistance: number;
+  clearDistance: number;
+  side: 'LEFT' | 'RIGHT' | 'CENTER' | 'FRONT';
+  shape: GeoLocation[];
+}
+
+export interface LayupTarget {
+  id: string;
+  name: string;
+  distance: number;
+  location: GeoLocation;
+  leavesDistance: number;
+  isSafe: boolean;
+}
+
+export interface HoleData {
+  number: number;
+  par: number;
+  yardage: number;
+  handicapIndex: number;
+  teeLocation: GeoLocation;
+  greenCenter: GeoLocation;
+  pinLocation: GeoLocation;
+  hazards: Hazard[];
+  layupTargets: LayupTarget[];
+}
+
+export interface ClubData {
+  name: string;
+  avgDistance: number;
+  minDistance: number;
+  maxDistance: number;
+  dispersion: number;
+}
+
+export interface ClubSuggestion {
+  club: string;
+  confidence: number;
+  adjustedDistance: number;
+  reason: string;
+  alternates: { club: string; reason: string }[];
+}
+
+export interface LiveShot {
+  id: string;
+  holeNumber: number;
+  shotNumber: number;
+  club: string;
+  result?: 'FAIRWAY' | 'ROUGH' | 'GREEN' | 'BUNKER' | 'WATER' | 'OB';
+  timestamp: Date;
+}
+
+export interface LiveRoundStats {
+  fairwaysHit: number;
+  fairwayAttempts: number;
+  greensHit: number;
+  greenAttempts: number;
+  totalPutts: number;
+  penalties: number;
+}
+
+export interface CaddieTip {
+  id: string;
+  type: 'STRATEGY' | 'WIND' | 'PIN' | 'MENTAL';
+  title: string;
+  message: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  icon: string;
+}
+
 // App State Types
-export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PLAY' | 'PROFILE';
+export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PLAY' | 'PROFILE' | 'SOCIAL';

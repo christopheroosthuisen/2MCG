@@ -4,6 +4,7 @@ import { UserProfile, ClubCategory } from '../types';
 import { db } from '../services/dataService';
 import { Text, Card, Badge, Button, ProgressBar } from './UIComponents';
 import { COLORS } from '../constants';
+import { SettingsHub } from './SettingsView';
 
 const Icons = {
     Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
@@ -14,11 +15,11 @@ const Icons = {
 };
 
 export const ProfileView: React.FC = () => {
+    const [showSettings, setShowSettings] = React.useState(false);
     const user = db.getUser();
     const handicapHistory = db.getHandicapHistory();
     const coach = db.getCoach();
 
-    // Group clubs by category for display
     const bagByCategory: Record<string, typeof user.bag> = {
         'WOOD': user.bag.filter(c => c.category === 'WOOD'),
         'IRON': user.bag.filter(c => c.category === 'IRON'),
@@ -47,15 +48,22 @@ export const ProfileView: React.FC = () => {
         </div>
     );
 
+    if (showSettings) {
+        return <SettingsHub onBack={() => setShowSettings(false)} />;
+    }
+
     return (
         <div className="space-y-8 pb-32 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header Profile Card */}
             <div className="px-1">
                 <Card variant="filled" className="bg-white border border-gray-200 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-gray-900 to-gray-800"></div>
-                    <div className="absolute top-4 right-4 text-white/20">
-                        <Icons.Award />
-                    </div>
+                    <button 
+                        onClick={() => setShowSettings(true)}
+                        className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-10"
+                    >
+                        <Icons.Settings />
+                    </button>
                     
                     <div className="relative pt-12 px-2 pb-2 text-center">
                         <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg mx-auto mb-3 overflow-hidden bg-gray-200">
@@ -63,7 +71,7 @@ export const ProfileView: React.FC = () => {
                         </div>
                         <Text variant="h2" className="mb-1">{user.name}</Text>
                         <Text variant="caption" className="flex justify-center items-center gap-2 mb-4">
-                            <Icons.Settings /> {user.homeCourse}
+                            {user.homeCourse}
                         </Text>
                         
                         <div className="flex justify-center gap-2">
@@ -74,7 +82,7 @@ export const ProfileView: React.FC = () => {
                 </Card>
             </div>
 
-            {/* Handicap Tracker (Phase 2) */}
+            {/* Handicap Tracker */}
             <section className="px-1">
                 <div className="flex justify-between items-center mb-3">
                     <Text variant="h3">Handicap Index</Text>
@@ -92,7 +100,6 @@ export const ProfileView: React.FC = () => {
                          </div>
                     </div>
                     
-                    {/* Visual Trend Chart (Simulated with Bars) */}
                     <div className="h-24 flex items-end justify-between gap-2">
                         {handicapHistory.map((h, i) => (
                             <div key={i} className="flex-1 flex flex-col justify-end items-center group">
@@ -109,7 +116,7 @@ export const ProfileView: React.FC = () => {
                 </Card>
             </section>
 
-            {/* Coach Connection (Phase 2) */}
+            {/* Coach Connection */}
             <section className="px-1">
                 <Text variant="h3" className="mb-3">My Coach</Text>
                 <div className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center">
@@ -157,7 +164,7 @@ export const ProfileView: React.FC = () => {
                 </div>
             </section>
 
-            {/* In The Bag (Phase 2 - Enhanced) */}
+            {/* In The Bag */}
             <section className="px-1">
                 <div className="flex justify-between items-center mb-3">
                     <Text variant="h3">In The Bag</Text>
@@ -193,10 +200,6 @@ export const ProfileView: React.FC = () => {
                     })}
                 </div>
             </section>
-
-            <div className="px-4 pt-4">
-                <Button variant="outline" fullWidth className="border-red-200 text-red-500 hover:bg-red-50">Sign Out</Button>
-            </div>
         </div>
     );
 };

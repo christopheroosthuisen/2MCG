@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
-import { Tab, ToolType, ClubCategory } from './types';
-import { COLORS } from './constants';
-import { Text, Button, Card, Badge, Input, ProgressBar } from './components/UIComponents';
+import React, { useState, useEffect } from 'react';
+import { Tab } from './types';
+import { Text, Button, Card, Badge, Input, ProgressBar, QuickAction } from './components/UIComponents';
 import { VideoRecorder, AnalysisResult, AnalyzeView } from './components/AnalysisViews';
 import { LearnSystem } from './components/LearnViews';
 import { PracticeSystem } from './components/PracticeViews';
@@ -12,8 +11,18 @@ import { BagOfShots } from './components/BagOfShots';
 import { ProfileView } from './components/ProfileView';
 import { OnCourseView } from './components/OnCourseView';
 import { FitnessView } from './components/FitnessView';
+import { WeatherView } from './components/WeatherView';
+import { WarmupView } from './components/WarmupView';
+import { SwingLibrary } from './components/SwingLibraryView'; 
+import { SocialHub } from './components/SocialView';
+import { StrokesGainedDashboard } from './components/StrokesGainedView';
+import { StatisticsHub } from './components/StatisticsView';
+import { RoundReplayHub } from './components/RoundReplayView';
+import { Onboarding } from './components/Onboarding';
+import { NotificationsView } from './components/NotificationsView';
 import { askAICaddie } from './services/geminiService';
 import { db } from './services/dataService';
+import { MOCK_NOTIFICATIONS } from './constants';
 
 const Icons = {
     Home: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>,
@@ -26,7 +35,9 @@ const Icons = {
     Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
     Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
-    Flag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+    Flag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>,
+    Users: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+    Bell: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
 };
 
 // Helper for relative time
@@ -45,24 +56,42 @@ function timeAgo(date: Date) {
     return Math.floor(seconds) + "s ago";
 }
 
-const QuickActionButton: React.FC<{ icon: React.ReactNode, label: string, onClick: () => void, colorClass: string }> = ({ icon, label, onClick, colorClass }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-2xl shadow-sm transition-all duration-200 group-hover:scale-105 group-active:scale-95 border ${colorClass}`}>
-            {icon}
-        </div>
-        <span className="text-xs font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{label}</span>
-    </button>
-);
+// Get dynamic greeting
+function getGreeting(name: string) {
+    const hour = new Date().getHours();
+    if (hour < 12) return `Good morning, ${name}`;
+    if (hour < 17) return `Good afternoon, ${name}`;
+    if (hour < 21) return `Good evening, ${name}`;
+    return `Night owl mode, ${name}`;
+}
 
 const App: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<Tab>('HOME');
+    const [analyzeTab, setAnalyzeTab] = useState<'VIDEO' | 'SG' | 'STATS' | 'REPLAY'>('VIDEO');
     const [subScreen, setSubScreen] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     // Get real user data
     const user = db.getUser();
+    
+    // Simple unread count mock
+    const unreadCount = MOCK_NOTIFICATIONS.filter(n => n.status === 'unread').length;
+
+    // Check for onboarding or first time load logic
+    useEffect(() => {
+        if (!user.onboardingCompleted) {
+            setShowOnboarding(true);
+        }
+    }, [user.onboardingCompleted]);
+
+    const completeOnboarding = () => {
+        setShowOnboarding(false);
+        // Force refresh might be needed in a real app or context update
+    };
 
     // Chat State
     const [messages, setMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
@@ -76,7 +105,6 @@ const App: React.FC = () => {
         setInput('');
         setLoadingChat(true);
         
-        // Use the service to call Gemini with Grounding
         const response = await askAICaddie(input, messages);
         setMessages(prev => [...prev, { role: 'model', text: response }]);
         setLoadingChat(false);
@@ -87,15 +115,27 @@ const App: React.FC = () => {
         setSubScreen(null);
     };
 
+    // --- Sub-Screen Rendering Logic ---
+    if (showOnboarding) {
+        return <Onboarding onComplete={completeOnboarding} />;
+    }
+
     if (isRecording) {
         return <VideoRecorder onAnalysisComplete={(res) => { setIsRecording(false); setSubScreen({ type: 'ANALYSIS_RESULT', id: res.id }); }} onCancel={() => setIsRecording(false)} />;
     }
+    
+    if (showNotifications) {
+        return <NotificationsView onBack={() => setShowNotifications(false)} />;
+    }
 
+    // Render Sub-screens over the main layout
     if (subScreen) {
         if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'TOOL') return <TempoTool onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
-        if (subScreen.type === 'FITNESS') return <div className="p-4"><Button onClick={() => setSubScreen(null)}>Back</Button><FitnessView /></div>; // Simple wrapper
+        if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
+        if (subScreen.type === 'WEATHER') return <div className="min-h-screen bg-white"><WeatherView onBack={() => setSubScreen(null)} /></div>; 
+        if (subScreen.type === 'WARMUP') return <div className="min-h-screen bg-white"><WarmupView onBack={() => setSubScreen(null)} /></div>; 
     }
 
     return (
@@ -103,56 +143,66 @@ const App: React.FC = () => {
             <main className="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-y-auto px-6 hide-scrollbar pb-24">
                     {currentTab === 'HOME' && (
-                        <div className="space-y-8 pt-6 pb-8">
+                        <div className="space-y-8 pt-6 pb-8 screen-enter">
                             {/* Header */}
                             <header className="flex justify-between items-center px-1">
                                 <div>
                                     <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-0.5">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
-                                    <Text variant="h2" className="text-gray-900 leading-tight">Hello, {user.name.split(' ')[0]}</Text>
-                                </div>
-                                <div className="relative group">
-                                    <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md cursor-pointer transition-transform group-hover:scale-105" onClick={() => navigateTo('PROFILE')}>
-                                        <img src={user.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                                    <Text variant="h2" className="text-gray-900 leading-tight">{getGreeting(user.name.split(' ')[0])}</Text>
+                                    
+                                    {/* Streak Widget */}
+                                    <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full mt-2 inline-flex border border-orange-100 animate-in fade-in zoom-in duration-300">
+                                        <span className="text-lg">🔥</span>
+                                        <span className="font-bold text-orange-600 text-xs">{user.stats.streak} Day Streak</span>
                                     </div>
-                                    <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <button 
+                                        className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                                        onClick={() => setShowNotifications(true)}
+                                    >
+                                        <Icons.Bell />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                        )}
+                                    </button>
+                                    <div className="relative group cursor-pointer transition-transform hover:scale-105" onClick={() => navigateTo('PROFILE')}>
+                                        <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md">
+                                            <img src={user.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                                        </div>
+                                    </div>
                                 </div>
                             </header>
 
-                            {/* Quick Actions Grid */}
-                            <div className="grid grid-cols-4 gap-4">
-                                <QuickActionButton 
-                                    icon={<Icons.Flag />} 
-                                    label="Play" 
-                                    onClick={() => navigateTo('PLAY')} 
-                                    colorClass="bg-green-50 border-green-100 text-green-600" 
-                                />
-                                <QuickActionButton 
-                                    icon={<Icons.Camera />} 
-                                    label="Analyze" 
-                                    onClick={() => setIsRecording(true)} 
-                                    colorClass="bg-orange-50 border-orange-100 text-orange-600" 
-                                />
-                                <QuickActionButton 
-                                    icon={<Icons.Target />} 
-                                    label="Practice" 
-                                    onClick={() => navigateTo('PRACTICE')} 
-                                    colorClass="bg-blue-50 border-blue-100 text-blue-600" 
-                                />
-                                <QuickActionButton 
-                                    icon={<Icons.Activity />} 
-                                    label="Fitness" 
-                                    onClick={() => setSubScreen({ type: 'FITNESS' })} 
-                                    colorClass="bg-red-50 border-red-100 text-red-600" 
-                                />
+                            {/* Quick Actions Grid (Updated Routing) */}
+                            <div>
+                                <Text variant="h3" className="mb-3 px-1">Quick Actions</Text>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <QuickAction 
+                                        icon="📏" 
+                                        label="Tempo" 
+                                        onClick={() => setSubScreen({ type: 'TOOL' })} 
+                                    />
+                                    <QuickAction 
+                                        icon="🌦️" 
+                                        label="Weather" 
+                                        onClick={() => setSubScreen({ type: 'WEATHER' })} 
+                                    />
+                                    <QuickAction 
+                                        icon="🤸" 
+                                        label="Warmup" 
+                                        onClick={() => setSubScreen({ type: 'WARMUP' })} 
+                                    />
+                                </div>
                             </div>
 
                             {/* AI Insight / Report Widget */}
-                            <div className="relative group cursor-pointer">
+                            <div className="relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
                                 <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl transform rotate-1 opacity-50 blur-sm group-hover:rotate-2 transition-transform"></div>
                                 <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-6 opacity-10"><Icons.Activity /></div>
                                     <div className="flex items-start gap-4 relative z-10">
-                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400 border border-white/10 backdrop-blur-md flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400 border border-white/10 backdrop-blur-md flex-shrink-0 animate-pulse">
                                             <span className="text-xl">💡</span>
                                         </div>
                                         <div className="flex-1">
@@ -167,24 +217,26 @@ const App: React.FC = () => {
                                 </Card>
                             </div>
 
-                            {/* Key Stats Row */}
+                            {/* Key Stats Row (Enhanced) */}
                             <div className="grid grid-cols-2 gap-4">
-                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100">
-                                    <div className="absolute right-[-20px] top-[-20px] bg-green-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
-                                    <div>
-                                        <Text variant="caption" className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Handicap</Text>
-                                        <div className="flex items-baseline gap-2 mt-1">
-                                            <Text variant="h1" className="text-4xl">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
-                                            <span className="text-green-600 text-[10px] font-bold bg-green-100 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                                                <span className="text-xs">↓</span> 0.2
-                                            </span>
+                                <Card className="col-span-2 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-5 border-none shadow-xl">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <Text variant="metric-label" className="text-gray-400">Handicap Index</Text>
+                                            <Text variant="metric" className="text-5xl text-white tracking-tighter mt-1">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
+                                            <div className="flex items-center gap-1 text-green-400 mt-2 text-xs font-bold bg-green-400/10 px-2 py-1 rounded inline-block">
+                                                <span>↓</span> 0.3 this month
+                                            </div>
+                                        </div>
+                                        {/* Mini visual trend */}
+                                        <div className="flex items-end gap-1 h-12 opacity-50">
+                                            {[40, 55, 35, 70, 50, 80, 65].map((h, i) => (
+                                                <div key={i} className="w-2 bg-white rounded-t-sm" style={{ height: `${h}%` }} />
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mt-2">
-                                        <div className="bg-green-500 h-full w-[70%] rounded-full"></div>
-                                    </div>
-                                    <Text className="text-[10px] text-gray-400 mt-2 font-medium">Top 5% of users</Text>
                                 </Card>
+                                
                                 <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100">
                                     <div className="absolute right-[-20px] top-[-20px] bg-orange-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
                                     <div>
@@ -199,88 +251,78 @@ const App: React.FC = () => {
                                         <ProgressBar progress={db.getGoals()[0]?.progress || 0} className="h-1.5" />
                                     </div>
                                 </Card>
-                            </div>
 
-                            {/* Recent Activity List */}
-                            <section>
-                                <div className="flex justify-between items-center mb-2 px-1">
-                                    <Text variant="h3">Activity Log</Text>
-                                </div>
-                                <div className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100">
-                                    {db.getRecentActions().slice(0, 5).map((action, i) => (
-                                        <div key={action.id} className={`flex gap-4 items-center p-3 rounded-2xl transition-colors hover:bg-gray-50 ${i !== db.getRecentActions().slice(0,5).length-1 ? 'border-b border-gray-50' : ''}`}>
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm text-lg border border-gray-100/50 ${
-                                                action.type === 'ADD_SWING' ? 'bg-blue-50 text-blue-500' :
-                                                action.type === 'ADD_SESSION' ? 'bg-green-50 text-green-500' :
-                                                action.type === 'MASTER_SHOT' ? 'bg-orange-50 text-orange-500' : 
-                                                action.type === 'COMPLETE_LESSON' ? 'bg-purple-50 text-purple-500' : 
-                                                action.type === 'ROUND_COMPLETE' ? 'bg-green-600 text-white' : 'bg-gray-50 text-gray-500'
-                                            }`}>
-                                                {action.type === 'ADD_SWING' && <Icons.Camera />}
-                                                {action.type === 'ADD_SESSION' && <Icons.Target />}
-                                                {action.type === 'MASTER_SHOT' && <div className="font-bold">★</div>}
-                                                {action.type === 'UPDATE_GOAL' && <Icons.Activity />}
-                                                {action.type === 'AI_CHAT' && <Icons.Message />}
-                                                {action.type === 'COMPLETE_LESSON' && <Icons.Book />}
-                                                {action.type === 'ROUND_COMPLETE' && <Icons.Flag />}
-                                                {action.type === 'WORKOUT_COMPLETE' && <Icons.Activity />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-baseline">
-                                                    <span className="text-sm font-bold text-gray-900 truncate pr-2">
-                                                        {action.type === 'ADD_SWING' && 'Swing Analysis'}
-                                                        {action.type === 'ADD_SESSION' && 'Practice Session'}
-                                                        {action.type === 'MASTER_SHOT' && 'Shot Mastered'}
-                                                        {action.type === 'UPDATE_GOAL' && 'Goal Update'}
-                                                        {action.type === 'AI_CHAT' && 'Caddie Chat'}
-                                                        {action.type === 'COMPLETE_LESSON' && 'Lesson Complete'}
-                                                        {action.type === 'ROUND_COMPLETE' && 'Round Played'}
-                                                        {action.type === 'WORKOUT_COMPLETE' && 'Workout Done'}
-                                                    </span>
-                                                    <span className="text-[10px] font-medium text-gray-400 flex-shrink-0">{timeAgo(action.timestamp)}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-0.5 truncate">
-                                                    {action.type === 'ADD_SWING' && `Analyzed ${action.details.club || 'Swing'}`}
-                                                    {action.type === 'ADD_SESSION' && `${action.details.shots} shots • ${db.getSessions().find(s=>s.id===action.details.id)?.club || 'Session'}`}
-                                                    {action.type === 'MASTER_SHOT' && `Mastered: ${action.details.title}`}
-                                                    {action.type === 'UPDATE_GOAL' && `Progress: ${action.details.progress}%`}
-                                                    {action.type === 'AI_CHAT' && `Conversation`}
-                                                    {action.type === 'COMPLETE_LESSON' && `${action.details.title} in ${action.details.course}`}
-                                                    {action.type === 'ROUND_COMPLETE' && `${action.details.course} • ${action.details.score}`}
-                                                    {action.type === 'WORKOUT_COMPLETE' && `${action.details.title}`}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {db.getRecentActions().length === 0 && (
-                                        <div className="text-center py-8 text-gray-400 italic text-sm">
-                                            No activity yet. Start practicing!
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
+                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100 cursor-pointer" onClick={() => setIsRecording(true)}>
+                                    <div className="absolute right-[-20px] top-[-20px] bg-blue-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
+                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+                                        <Icons.Camera />
+                                    </div>
+                                    <div>
+                                        <Text variant="h4" className="text-base font-bold">Record Swing</Text>
+                                        <Text variant="caption" className="text-xs">AI Analysis</Text>
+                                    </div>
+                                </Card>
+                            </div>
                         </div>
                     )}
-                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} />}
-                    {currentTab === 'LEARN' && <LearnSystem />}
+                    {currentTab === 'PRACTICE' && <div className="screen-enter"><PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} /></div>}
+                    {currentTab === 'LEARN' && <div className="screen-enter"><LearnSystem /></div>}
+                    
+                    {/* Updated Analyze Tab Structure */}
                     {currentTab === 'ANALYZE' && (
-                        <AnalyzeView 
-                            onRecord={() => setIsRecording(true)}
-                            onSelectSwing={(id) => setSubScreen({ type: 'ANALYSIS_RESULT', id })}
-                            onUpload={() => setIsUploadWizardOpen(true)}
-                        />
+                        <div className="screen-enter flex flex-col h-full">
+                            <div className="px-6 pt-6 pb-2 bg-white sticky top-0 z-10 border-b border-gray-100">
+                                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Data & Video</Text>
+                                <Text variant="h1" className="mb-4">Analyze</Text>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setAnalyzeTab('VIDEO')}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'VIDEO' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                    >
+                                        Video
+                                    </button>
+                                    <button 
+                                        onClick={() => setAnalyzeTab('SG')}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'SG' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                    >
+                                        Gained
+                                    </button>
+                                    <button 
+                                        onClick={() => setAnalyzeTab('STATS')}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'STATS' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                    >
+                                        Stats
+                                    </button>
+                                    <button 
+                                        onClick={() => setAnalyzeTab('REPLAY')}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'REPLAY' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                    >
+                                        Replay
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="flex-1 pt-4">
+                                {analyzeTab === 'VIDEO' && <SwingLibrary onRecord={() => setIsRecording(true)} />}
+                                {analyzeTab === 'SG' && <StrokesGainedDashboard />}
+                                {analyzeTab === 'STATS' && <StatisticsHub />}
+                                {analyzeTab === 'REPLAY' && <RoundReplayHub onBack={() => setAnalyzeTab('VIDEO')} />}
+                            </div>
+                        </div>
                     )}
-                    {currentTab === 'PLAY' && <OnCourseView />}
-                    {currentTab === 'PROFILE' && <ProfileView />}
+                    
+                    {currentTab === 'PLAY' && <div className="screen-enter"><OnCourseView /></div>}
+                    {currentTab === 'PROFILE' && <div className="screen-enter"><ProfileView /></div>}
+                    {currentTab === 'SOCIAL' && <div className="screen-enter"><SocialHub /></div>}
                 </div>
 
-                <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
+                <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
                     <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
                     <NavButton active={currentTab === 'PLAY'} onClick={() => navigateTo('PLAY')} icon={<Icons.Flag />} label="Play" />
                     <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
                     <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
                     <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
-                    <NavButton active={currentTab === 'PROFILE'} onClick={() => navigateTo('PROFILE')} icon={<Icons.User />} label="Profile" />
+                    <NavButton active={currentTab === 'SOCIAL'} onClick={() => navigateTo('SOCIAL')} icon={<Icons.Users />} label="Social" />
                 </nav>
 
                 {/* AI Caddie Floating Button */}
@@ -341,9 +383,12 @@ const App: React.FC = () => {
 };
 
 const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; }> = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all w-14 ${active ? 'text-[#FF8200] -translate-y-1' : 'text-gray-400 hover:text-gray-600'}`}>
-        <div className={`w-6 h-6 ${active ? 'stroke-[2.5px]' : ''}`}>{icon}</div>
-        <span className={`text-[10px] font-bold ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
+    <button onClick={onClick} className={`relative flex flex-col items-center gap-1 transition-all w-12 ${active ? 'text-[#FF8200] -translate-y-1' : 'text-gray-400 hover:text-gray-600'}`}>
+        {active && (
+            <div className="absolute -top-2 w-1 h-1 bg-orange-500 rounded-full tab-fade" />
+        )}
+        <div className={`w-5 h-5 ${active ? 'stroke-[2.5px]' : ''}`}>{icon}</div>
+        <span className={`text-[9px] font-bold ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
     </button>
 );
 

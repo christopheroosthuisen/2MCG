@@ -109,6 +109,8 @@ class DataService {
     addSession(session: TrackManSession) {
         this.sessions.unshift(session);
         this.logAction('ADD_SESSION', { id: session.id, shots: session.shotsHit });
+        // Update streak logic (simplified)
+        this.user.stats.streak += 1;
         this.save();
     }
 
@@ -145,6 +147,14 @@ class DataService {
 
     updateUser(updates: Partial<UserProfile>) {
         this.user = { ...this.user, ...updates };
+        this.save();
+    }
+
+    // New action to complete onboarding
+    completeOnboarding(handicap: number, dexterity: 'Right' | 'Left') {
+        this.user.swingDNA.handicap = handicap;
+        this.user.swingDNA.dexterity = dexterity as any;
+        this.user.onboardingCompleted = true;
         this.save();
     }
 

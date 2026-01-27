@@ -1,12 +1,12 @@
 
-import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath, BagShotSlot, OnCourseRound, Workout, HandicapRecord, CoachProfile } from "./types";
+import { Drill, Lesson, SwingAnalysis, Course, PracticeGoal, TrackManSession, UserProfile, LearningPath, BagShotSlot, OnCourseRound, Workout, HandicapRecord, CoachProfile, SwingVideo, VideoFolder, ProSwing, GolfFriend, ActivityItem, Tournament, StrokesGained, AppPreferences, PrivacySettings, LinkedAccount, SubscriptionInfo, GolfProfile, DetailedRound, PatternData, TrendAlert, PuttingStats, PuttingGame, HoleScore, Shot, Notification, NotificationPreference, HoleData, PlayingConditions, ClubData, CaddieTip } from "./types";
 
 export const COLORS = {
     primary: '#FF8200', // UT Orange
     secondary: '#115740', // Fairway Green
     white: '#FFFFFF',
     gray: '#4B4B4B',
-    background: '#F5F5F7',
+    background: '#F5F5F5',
     surface: '#FFFFFF',
     textPrimary: '#1A1A1A',
     textSecondary: '#6B7280',
@@ -16,7 +16,19 @@ export const COLORS = {
     info: '#3B82F6',
     border: '#E5E7EB',
     dark: '#111827',
-    videoControls: '#1F2937' // Dark gray for video UI
+    videoControls: '#1F2937', // Dark gray for video UI
+    premium: '#FFD700',
+    // Stat specific colors
+    driving: '#8B5CF6',
+    approach: '#3B82F6',
+    shortGame: '#22C55E',
+    putting: '#F59E0B',
+    birdie: '#22C55E',
+    par: '#3B82F6',
+    bogey: '#F59E0B',
+    double: '#EF4444',
+    water: '#3B82F6',
+    bunker: '#D4A574',
 };
 
 export const SPACING = {
@@ -27,8 +39,6 @@ export const SPACING = {
     xl: '32px',
 };
 
-// ... (Existing MOCK_USER_PROFILE, MOCK_BAG_SLOTS, MOCK_LEARNING_PATHS, MOCK_COURSES, MOCK_DRILLS, MOCK_LESSONS, MOCK_RECENT_SWINGS, MOCK_GOALS, MOCK_SESSIONS remain the same, just included implicitly or I can reprint if needed. To save space I will append the NEW mocks)
-
 export const MOCK_USER_PROFILE: UserProfile = {
     id: 'u1',
     name: 'Tiger Woods',
@@ -36,12 +46,14 @@ export const MOCK_USER_PROFILE: UserProfile = {
     memberStatus: 'TOUR',
     avatarUrl: 'https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?auto=format&fit=crop&q=80&w=400',
     homeCourse: 'Medalist Golf Club',
+    onboardingCompleted: true,
     stats: {
         roundsPlayed: 14,
         avgScore: 68.2,
         fairwaysHit: 72,
         greensInRegulation: 78,
-        puttsPerRound: 28.5
+        puttsPerRound: 28.5,
+        streak: 7
     },
     swingDNA: {
         driverSpeed: 122,
@@ -49,7 +61,7 @@ export const MOCK_USER_PROFILE: UserProfile = {
         tempo: 'FAST',
         typicalShape: 'FADE',
         handicap: +6.4,
-        dexterity: 'RIGHT',
+        dexterity: 'Right',
         height: '6\' 1"'
     },
     bag: [
@@ -70,433 +82,209 @@ export const MOCK_USER_PROFILE: UserProfile = {
 };
 
 export const MOCK_BAG_SLOTS: BagShotSlot[] = [
-    { id: '1', title: 'Power Fade', distanceRange: '260y+', lie: 'TEE', shape: 'FADE', trajectory: 'HIGH', isMastered: true, masteryDate: new Date('2023-10-15') },
-    { id: '2', title: 'High Draw', distanceRange: '260y+', lie: 'TEE', shape: 'DRAW', trajectory: 'HIGH', isMastered: false },
-    { id: '3', title: 'Stinger', distanceRange: '220-240y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-11-02') },
-    { id: '4', title: 'Stock 7 Iron', distanceRange: '170-175y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'STANDARD', isMastered: true, masteryDate: new Date('2023-09-10') },
-    { id: '5', title: 'Bunker Blast', distanceRange: '10-20y', lie: 'BUNKER_GREEN', shape: 'STRAIGHT', trajectory: 'HIGH', isMastered: false },
-    { id: '6', title: 'Flop Shot', distanceRange: '< 20y', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'HIGH', isMastered: false },
-    { id: '7', title: 'Punch Out', distanceRange: '100y', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-12-01') },
-    { id: '8', title: 'Bump & Run', distanceRange: '< 30y', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'LOW', isMastered: true, masteryDate: new Date('2023-08-20') },
+    {
+        id: 'bs1',
+        title: 'Stock 7 Iron',
+        distanceRange: '172-175 yards',
+        lie: 'FAIRWAY',
+        shape: 'STRAIGHT',
+        trajectory: 'STANDARD',
+        isMastered: true,
+        masteryDate: new Date('2023-11-15')
+    },
+    {
+        id: 'bs2',
+        title: 'Low Punch',
+        distanceRange: '140-150 yards',
+        lie: 'ROUGH',
+        shape: 'DRAW',
+        trajectory: 'LOW',
+        isMastered: false
+    },
+    {
+        id: 'bs3',
+        title: 'High Flop',
+        distanceRange: '20-30 yards',
+        lie: 'ROUGH',
+        shape: 'STRAIGHT',
+        trajectory: 'HIGH',
+        isMastered: true,
+        masteryDate: new Date('2024-01-20')
+    }
 ];
 
 export const MOCK_LEARNING_PATHS: LearningPath[] = [
     {
-        id: 'p1',
-        title: 'The Short Game Specialist',
-        description: 'Master the art of scoring from 100 yards and in.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1629210087796-749e7b243452?auto=format&fit=crop&q=80&w=800',
-        courseIds: ['c7', 'c5', 'c6'],
+        id: 'path1',
+        title: 'Breaking 90',
+        description: 'Complete guide to scoring better without changing your swing mechanics.',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1593111774240-d529f12db464?auto=format&fit=crop&q=80&w=600',
+        courseIds: ['c1', 'c2'],
         totalCourses: 3
     },
     {
-        id: 'p2',
-        title: 'The Data Analyst',
-        description: 'Learn to read TrackMan numbers and optimize your flight.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
-        courseIds: ['q1', 'q2'],
-        totalCourses: 2
-    },
-    {
-        id: 'p3',
-        title: 'The Ball Striker',
-        description: 'Compress the ball and control trajectory with your irons.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1535132011086-b8818f016104?auto=format&fit=crop&q=80&w=800',
-        courseIds: ['c3', 'c1'],
+        id: 'path2',
+        title: 'Elite Ball Striking',
+        description: 'Learn to compress the ball like a tour pro.',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1629210087796-749e7b243452?auto=format&fit=crop&q=80&w=600',
+        courseIds: ['c3'],
         totalCourses: 2
     }
 ];
 
 export const MOCK_COURSES: Course[] = [
     {
-        id: 'c7',
-        title: 'Putting Mastery',
-        subtitle: 'The Cadence of Scoring',
-        tagline: 'Movement I: The Green',
-        category: 'PUTTING',
-        description: 'Speed, read, and start line. 40% of your strokes happen here. Master the data behind the most important club in the bag.',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1629210087796-749e7b243452?auto=format&fit=crop&q=80&w=800', 
-        totalDuration: 60,
-        progress: 45,
-        handicapImpact: 4.5,
+        id: 'c1',
+        title: 'Driver Unleashed',
+        subtitle: 'Add 20 Yards',
+        category: 'DRIVER',
+        description: 'Unlock your potential distance through ground force mechanics and optimized launch conditions.',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?auto=format&fit=crop&q=80&w=600',
+        instructor: 'Dr. Sasho MacKenzie',
         modules: [
             {
-                id: 'm7-1',
-                title: 'Start Line Control',
+                id: 'm1',
+                title: 'Ground Force',
                 lessons: [
                     {
-                         id: 'l7-1-1',
-                         title: 'The Gate Drill',
-                         description: 'Ensuring your ball starts on the intended line every time.',
-                         videoUrl: '',
-                         durationMinutes: 12,
-                         completed: true,
-                         locked: false,
-                         keyTakeaways: ['Face angle at impact accounts for 90% of start direction', 'Eye position affects aim'],
-                         resources: [],
-                         targetMetrics: [{ label: 'Launch Dir', value: '< 0.5°' }]
+                        id: 'l1',
+                        title: 'Using the Ground',
+                        description: 'Introduction to vertical force.',
+                        videoUrl: '',
+                        durationMinutes: 12,
+                        completed: true,
+                        locked: false,
+                        keyTakeaways: ['Push down to go up', 'Timing is key'],
+                        resources: []
                     }
                 ]
             }
-        ]
+        ],
+        totalDuration: 45,
+        progress: 33,
+        handicapImpact: 2.1,
+        tagline: 'BOMB IT'
     },
     {
-        id: 'c5',
-        title: 'Chipping Artistry',
-        subtitle: 'Rhythm & Flow',
-        tagline: 'Movement II: The Fringe',
-        category: 'CHIPPING',
-        description: 'Around the green artistry. Simplify your technique to eliminate double bogeys and save par from anywhere.',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1615112189490-6750059c994f?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 30,
-        progress: 10,
-        handicapImpact: 3.0,
-        modules: []
-    },
-    {
-        id: 'c6',
-        title: 'Bunker Play',
-        subtitle: 'Texture & Splash',
-        tagline: 'Movement III: The Sand',
-        category: 'SAND',
-        description: 'Understanding bounce and sand interaction. Turn fear into confidence with proper setup and release.',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 25,
+        id: 'c2',
+        title: 'Short Game Wizardry',
+        subtitle: 'Up & Down',
+        category: 'SHORT_GAME',
+        description: 'Master the wedges from 100 yards and in.',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1592919505780-30395071e867?auto=format&fit=crop&q=80&w=600',
+        instructor: 'Phil Mickelson',
+        modules: [],
+        totalDuration: 60,
         progress: 0,
-        handicapImpact: 1.2,
-        modules: []
-    },
-    {
-        id: 'c4',
-        title: 'Pitching',
-        subtitle: 'Control & Trajectory',
-        tagline: 'Movement IV: The Wedge',
-        category: 'PITCHING',
-        description: 'From 30 to 80 yards. Learn to modulate spin and flight for pin-point accuracy using the "Clock System".',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 40,
-        progress: 0,
-        handicapImpact: 2.5,
-        modules: []
+        handicapImpact: 3.5,
+        tagline: 'SAVE PAR'
     },
     {
         id: 'c3',
-        title: 'Iron Play',
-        subtitle: 'The Heart of the Round',
-        tagline: 'Movement V: The Approach',
-        category: 'IRON_PLAY',
-        description: 'Reliability and repeatability. The movements required to hit greens from 150-175 yards.',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1535132011086-b8818f016104?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 50,
-        progress: 0,
-        handicapImpact: 1.8,
-        modules: []
-    },
-    {
-        id: 'c1',
-        title: 'Driving',
-        subtitle: 'Maximum Distance',
-        tagline: 'Movement VI: The Tee',
-        category: 'DRIVER',
-        description: 'Set the tone for your round. Master the optimized launch conditions required for modern driving performance.',
-        instructor: 'Joe Mayo',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1591123720664-325d62597771?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 45,
-        progress: 0,
-        handicapImpact: 2.1,
-        modules: []
-    },
-    {
-        id: 'q1',
-        title: 'Intro to Ball Flight Physics',
-        subtitle: 'The Science of the D-Plane',
-        tagline: 'Quant Lab I',
-        category: 'QUANT_ANALYSIS',
-        description: 'Understand the D-Plane, Spin Axis, and why the ball curves. Essential for diagnosing your own misses.',
-        instructor: 'Dr. Sasho MacKenzie',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=800', 
-        totalDuration: 55,
-        progress: 0,
-        handicapImpact: 1.5,
-        modules: []
-    },
-    {
-        id: 'q2',
         title: 'Strokes Gained 101',
-        subtitle: 'Smart Strategy',
-        tagline: 'Quant Lab II',
+        subtitle: 'Math of Scoring',
         category: 'QUANT_ANALYSIS',
-        description: 'Stop aiming at flags. Learn how strokes gained data should dictate your course management strategy.',
+        description: 'Understand where you are actually losing strokes.',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600',
         instructor: 'Mark Broadie',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800', 
-        totalDuration: 40,
-        progress: 0,
-        handicapImpact: 3.2,
-        modules: []
+        modules: [],
+        totalDuration: 90,
+        progress: 10,
+        handicapImpact: 1.5,
+        tagline: 'DATA DRIVEN'
     }
 ];
 
 export const MOCK_DRILLS: Drill[] = [
     {
-        id: '3',
-        title: 'Gate Putting',
-        description: 'Improve your start line accuracy on the greens.',
-        difficulty: 'ADVANCED',
+        id: 'd1',
+        title: 'Gate Drill',
+        description: 'Classic putting drill for start line control.',
+        difficulty: 'BEGINNER',
         category: 'PUTTING',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1631116618155-6074e787a30b?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 20,
-        steps: [
-            { order: 1, text: 'Place two tees just wider than the putter head.' },
-            { order: 2, text: 'Place two more tees 1 foot in front to create a gate.' },
-            { order: 3, text: 'Putt through both gates without touching tees.' }
-        ]
+        steps: [{ order: 1, text: 'Place two tees just wider than putter head.' }],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&q=80&w=400',
+        durationMinutes: 15
     },
     {
-        id: 'd-putt-2',
-        title: 'The Clock Drill',
-        description: 'Simulate pressure putting from 3, 6, and 9 feet around the hole.',
+        id: 'd2',
+        title: 'Clock Drill',
+        description: 'Pressure putting from 3, 6, and 9 feet.',
         difficulty: 'INTERMEDIATE',
         category: 'PUTTING',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1593111774240-d529f12db464?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 15,
-        steps: [
-            { order: 1, text: 'Place balls at 12, 3, 6, and 9 o\'clock positions at 3 feet.' },
-            { order: 2, text: 'Make all 4 in a row. If you miss, restart.' },
-            { order: 3, text: 'Move back to 4 feet and repeat.' }
-        ]
-    },
-    {
-        id: '4',
-        title: 'The Towel Drill',
-        description: 'Low point control for consistent chipping. Eliminates chunks and skulls.',
-        difficulty: 'BEGINNER',
-        category: 'CHIPPING',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1596547608848-3601569427db?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 10,
-        steps: [
-            { order: 1, text: 'Place a small towel 4 inches behind the ball.' },
-            { order: 2, text: 'Hit chip shots without disturbing the towel.' },
-            { order: 3, text: 'Focus on weight forward setup.' }
-        ]
-    },
-    {
-        id: 'd-chip-2',
-        title: 'Landing Spot Ladder',
-        description: 'Develop touch and distance control for chip shots.',
-        difficulty: 'ADVANCED',
-        category: 'CHIPPING',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 20,
-        steps: [
-            { order: 1, text: 'Place towels at 10, 20, and 30 feet.' },
-            { order: 2, text: 'Land the ball on the first towel.' },
-            { order: 3, text: 'Progress to the next only after success.' }
-        ]
-    },
-    {
-        id: 'd-bunker-1',
-        title: 'The Line in the Sand',
-        description: 'Learn to strike the sand in the correct spot every time for consistent splashes.',
-        difficulty: 'BEGINNER',
-        category: 'BUNKER',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 15,
-        steps: [
-            { order: 1, text: 'Draw a line in the sand perpendicular to your target.' },
-            { order: 2, text: 'Practice straddling the line and striking 2 inches behind it.' },
-            { order: 3, text: 'Ensure the divot exits well after the line.' }
-        ]
-    },
-    {
-        id: 'd-bunker-2',
-        title: 'The Fried Egg Escape',
-        description: 'Advanced technique for getting the ball out of a buried lie.',
-        difficulty: 'ADVANCED',
-        category: 'BUNKER',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1605142859392-2342551ec94d?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 10,
-        steps: [
-            { order: 1, text: 'Close the clubface slightly (hood it).' },
-            { order: 2, text: 'Swing steeper into the sand behind the ball.' },
-            { order: 3, text: 'Do not follow through aggressively.' }
-        ]
-    },
-    {
-        id: '1',
-        title: 'Perfect Takeaway',
-        description: 'Master the first 2 feet of your swing to ensure a solid plane.',
-        difficulty: 'BEGINNER',
-        category: 'FULL_SWING',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1592850935576-1c258d4ae01a?auto=format&fit=crop&q=80&w=800',
-        durationMinutes: 10,
-        steps: [
-            { order: 1, text: 'Set up with alignment sticks on the ground.' },
-            { order: 2, text: 'Keep club head outside your hands.' },
-            { order: 3, text: 'Pause at parallel to check face angle.' }
-        ]
+        steps: [],
+        thumbnailUrl: 'https://images.unsplash.com/photo-1622602737677-4b711979b939?auto=format&fit=crop&q=80&w=400',
+        durationMinutes: 20
     }
 ];
 
-export const MOCK_LESSONS: Lesson[] = [
-    {
-        id: '1',
-        title: 'The Art of the Short Game',
-        instructor: 'Joe Mayo',
-        description: 'Why 100 yards and in is the fastest way to lower scores.',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&q=80&w=800',
-        totalDuration: 45,
-        progress: 0,
-        chapters: [],
-        completed: false,
-        locked: false,
-        keyTakeaways: [],
-        resources: [],
-        videoUrl: '',
-        durationMinutes: 45
-    }
-];
+export const MOCK_LESSONS: Lesson[] = [];
 
 export const MOCK_RECENT_SWINGS: SwingAnalysis[] = [
     {
-        id: '103',
-        date: new Date(Date.now() - 3600000), 
-        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1629210087796-749e7b243452?auto=format&fit=crop&q=80&w=400',
-        clubUsed: 'LW',
-        tags: ['Bunker', 'Short Sided', 'Save'],
-        metrics: {
-            clubSpeed: 45,
-            ballSpeed: 48,
-            carryDistance: 12,
-            launchAngle: 42.0,
-            spinRate: 3500
-        },
-        feedback: [
-            {
-                id: 'f3',
-                timestamp: 1.0,
-                text: 'Excellent use of bounce. Shallow entry.',
-                severity: 'INFO',
-                category: 'PLANE'
-            }
-        ],
-        keyframes: [],
-        score: 95
-    },
-    {
-        id: '101',
-        date: new Date(Date.now() - 86400000), 
-        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 
+        id: 's1',
+        date: new Date(Date.now() - 86400000),
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
         thumbnailUrl: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&q=80&w=400',
         clubUsed: 'DRIVER',
-        tags: ['Range', 'Speed Training'],
-        metrics: {
-            clubSpeed: 105,
-            ballSpeed: 152,
-            carryDistance: 245,
-            launchAngle: 12.5,
-            spinRate: 2400
-        },
-        feedback: [
-             {
-                id: 'f1',
-                timestamp: 1.2,
-                text: 'Good shoulder turn at the top.',
-                severity: 'INFO',
-                category: 'ROTATION'
-            },
-            {
-                id: 'f2',
-                timestamp: 2.1,
-                text: 'Slight early extension before impact.',
-                severity: 'WARNING',
-                category: 'POSTURE',
-                correction: 'Try the Impact Bag Drill'
-            }
-        ],
+        tags: ['Power', 'Range'],
+        metrics: { clubSpeed: 118, carryDistance: 295 },
+        feedback: [],
         keyframes: [],
-        score: 82
+        score: 92
+    },
+    {
+        id: 's2',
+        date: new Date(Date.now() - 172800000),
+        videoUrl: '',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1593111774240-d529f12db464?auto=format&fit=crop&q=80&w=400',
+        clubUsed: 'IRON-7',
+        tags: ['Tempo'],
+        metrics: { clubSpeed: 92, carryDistance: 175 },
+        feedback: [],
+        keyframes: [],
+        score: 85
     }
 ];
 
 export const MOCK_GOALS: PracticeGoal[] = [
     {
-        id: 'g3',
-        title: 'Up & Down %',
-        metric: 'smashFactor', 
-        targetValue: 60,
-        currentValue: 42,
-        unit: '%',
-        progress: 70,
-        deadline: new Date(Date.now() + 86400000 * 15)
-    },
-    {
         id: 'g1',
-        title: 'Speed Training',
+        title: 'Increase Driver Speed',
         metric: 'clubSpeed',
-        targetValue: 110,
-        currentValue: 105,
+        targetValue: 125,
+        currentValue: 118,
         unit: 'mph',
-        progress: 65,
-        deadline: new Date(Date.now() + 86400000 * 30)
+        deadline: new Date('2024-06-01'),
+        progress: 65
     }
 ];
 
 export const MOCK_SESSIONS: TrackManSession[] = [
     {
-        id: 's3',
-        date: new Date(Date.now() - 3600000 * 2),
-        location: 'Short Game Area',
-        shotsHit: 40,
-        club: 'SW',
-        avgMetrics: { clubSpeed: 50, ballSpeed: 52, carryDistance: 45, spinRate: 6000 },
-        bestMetrics: { clubSpeed: 52, ballSpeed: 55, carryDistance: 48, spinRate: 6200 },
-        consistencyScore: 92,
-        notes: 'Working on 50 yard landing spots.'
-    },
-    {
-        id: 's1',
-        date: new Date(Date.now() - 86400000),
-        location: 'The Studio',
-        shotsHit: 50,
+        id: 'ts1',
+        date: new Date(Date.now() - 86400000 * 2),
+        location: 'Indoor Lab',
+        shotsHit: 45,
         club: 'DRIVER',
-        avgMetrics: { clubSpeed: 104, ballSpeed: 151, carryDistance: 242, spinRate: 2500 },
-        bestMetrics: { clubSpeed: 106, ballSpeed: 154, carryDistance: 248, spinRate: 2350 },
+        avgMetrics: { clubSpeed: 116, spinRate: 2400 },
+        bestMetrics: { clubSpeed: 119 },
         consistencyScore: 88,
-        notes: 'Focused on tempo. Feeling good about the transition.'
+        notes: 'Feeling fast today.'
     }
 ];
-
-// --- NEW MOCKS FOR PHASE 2 ---
 
 export const MOCK_ROUNDS: OnCourseRound[] = [
     {
         id: 'r1',
         courseName: 'Pebble Beach',
-        date: new Date('2023-11-10'),
+        date: new Date(Date.now() - 86400000 * 3),
         score: 74,
         par: 72,
         holesPlayed: 18,
         fairwaysHit: 9,
         greensInRegulation: 12,
         putts: 31,
-        isCompleted: true
-    },
-    {
-        id: 'r2',
-        courseName: 'Spyglass Hill',
-        date: new Date('2023-11-12'),
-        score: 78,
-        par: 72,
-        holesPlayed: 18,
-        fairwaysHit: 7,
-        greensInRegulation: 10,
-        putts: 33,
         isCompleted: true
     }
 ];
@@ -505,47 +293,729 @@ export const MOCK_WORKOUTS: Workout[] = [
     {
         id: 'w1',
         title: 'Rotational Power',
-        category: 'STRENGTH',
+        category: 'SPEED',
         duration: 45,
         difficulty: 'ADVANCED',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400',
         exercisesCount: 8,
-        completed: false
-    },
-    {
-        id: 'w2',
-        title: 'Pre-Round Mobility',
-        category: 'FLEXIBILITY',
-        duration: 15,
-        difficulty: 'BEGINNER',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1544367563-12123d896889?auto=format&fit=crop&q=80&w=800',
-        exercisesCount: 5,
-        completed: true
-    },
-    {
-        id: 'w3',
-        title: 'SuperSpeed Protocol',
-        category: 'SPEED',
-        duration: 20,
-        difficulty: 'INTERMEDIATE',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?auto=format&fit=crop&q=80&w=800',
-        exercisesCount: 3,
         completed: false
     }
 ];
 
 export const MOCK_HANDICAP_HISTORY: HandicapRecord[] = [
-    { id: 'h1', date: new Date('2023-08-01'), index: 6.8, trend: 'STABLE', roundsIncluded: 20 },
-    { id: 'h2', date: new Date('2023-09-01'), index: 6.5, trend: 'DOWN', roundsIncluded: 20 },
-    { id: 'h3', date: new Date('2023-10-01'), index: 6.4, trend: 'DOWN', roundsIncluded: 20 },
+    { id: 'h1', date: new Date('2024-01-01'), index: 5.4, trend: 'STABLE', roundsIncluded: 20 },
+    { id: 'h2', date: new Date('2024-02-01'), index: 4.8, trend: 'DOWN', roundsIncluded: 20 },
+    { id: 'h3', date: new Date('2024-03-01'), index: 4.2, trend: 'DOWN', roundsIncluded: 20 }
 ];
 
 export const MOCK_COACH: CoachProfile = {
     id: 'coach1',
     name: 'Butch Harmon',
-    title: 'Master Instructor',
+    title: 'Swing Consultant',
     location: 'Las Vegas, NV',
-    avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=400',
-    specialty: 'Swing Mechanics',
-    rate: 350
+    avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=200',
+    specialty: 'Full Swing',
+    rate: 500
 };
+
+export const MOCK_SWING_VIDEOS: SwingVideo[] = [
+    {
+        id: 'sv1',
+        recordedAt: new Date(Date.now() - 86400000),
+        club: 'DRIVER',
+        angle: 'FACE_ON',
+        duration: 3.2,
+        thumbnailUrl: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&q=80&w=400',
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        tags: ['Speed Training'],
+        rating: 4,
+        keyPositions: [
+            { id: 'kp1', name: 'Top', frameNumber: 45, timestamp: 1.5, angles: [{ name: 'Shoulder Turn', value: 95, ideal: 90 }] }
+        ],
+        annotations: [],
+        aiScore: 88
+    },
+    {
+        id: 'sv2',
+        recordedAt: new Date(Date.now() - 172800000),
+        club: 'IRON-7',
+        angle: 'DOWN_THE_LINE',
+        duration: 3.5,
+        thumbnailUrl: 'https://images.unsplash.com/photo-1593111774240-d529f12db464?auto=format&fit=crop&q=80&w=400',
+        videoUrl: '',
+        tags: ['Tempo'],
+        rating: 5,
+        keyPositions: [],
+        annotations: [],
+        aiScore: 92
+    }
+];
+
+export const MOCK_FOLDERS: VideoFolder[] = [
+    { id: 'f1', name: 'Driver Swings', color: '#FF8200', videoCount: 12, createdAt: new Date() },
+    { id: 'f2', name: 'Wedge Play', color: '#10B981', videoCount: 8, createdAt: new Date() }
+];
+
+export const MOCK_PRO_SWINGS: ProSwing[] = [
+    {
+        id: 'pro1',
+        playerName: 'Rory McIlroy',
+        club: 'DRIVER',
+        angle: 'FACE_ON',
+        videoUrl: '',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+        keyMetrics: [{ name: 'Shoulder Turn', value: '110°' }]
+    },
+    {
+        id: 'pro2',
+        playerName: 'Tiger Woods',
+        club: 'IRON-7',
+        angle: 'DOWN_THE_LINE',
+        videoUrl: '',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?auto=format&fit=crop&q=80&w=200',
+        keyMetrics: [{ name: 'Plane', value: 'Neutral' }]
+    }
+];
+
+export const MOCK_FRIENDS: GolfFriend[] = [
+    {
+        id: 'f1',
+        name: 'Jordan Spieth',
+        avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200',
+        handicap: 0.2,
+        homeCourse: 'Brook Hollow',
+        status: 'PLAYING',
+        lastActive: new Date(),
+        mutualFriends: 12,
+        roundsTogether: 8
+    },
+    {
+        id: 'f2',
+        name: 'Rory McIlroy',
+        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+        handicap: 0.5,
+        homeCourse: 'Royal County Down',
+        status: 'ONLINE',
+        lastActive: new Date(Date.now() - 3600000),
+        mutualFriends: 8,
+        roundsTogether: 3
+    },
+    {
+        id: 'f3',
+        name: 'Scottie Scheffler',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
+        handicap: 0.1,
+        homeCourse: 'Royal Oaks',
+        status: 'OFFLINE',
+        lastActive: new Date(Date.now() - 86400000),
+        mutualFriends: 5,
+        roundsTogether: 1
+    }
+];
+
+export const MOCK_ACTIVITY: ActivityItem[] = [
+    {
+        id: 'a1',
+        userId: 'f1',
+        userName: 'Jordan Spieth',
+        userAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200',
+        type: 'ROUND',
+        timestamp: new Date(Date.now() - 3600000),
+        data: { score: 68, course: 'Colonial CC', par: 70 },
+        likes: 24,
+        comments: 5,
+        hasLiked: false
+    },
+    {
+        id: 'a2',
+        userId: 'f2',
+        userName: 'Rory McIlroy',
+        userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+        type: 'ACHIEVEMENT',
+        timestamp: new Date(Date.now() - 86400000),
+        data: { achievement: '30-Day Streak', description: 'Practiced for 30 days straight!' },
+        likes: 42,
+        comments: 12,
+        hasLiked: true
+    },
+    {
+        id: 'a3',
+        userId: 'f3',
+        userName: 'Scottie Scheffler',
+        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
+        type: 'PR',
+        timestamp: new Date(Date.now() - 172800000),
+        data: { metric: 'Driver Distance', oldValue: 295, newValue: 302 },
+        likes: 18,
+        comments: 3,
+        hasLiked: false
+    }
+];
+
+export const MOCK_TOURNAMENTS: Tournament[] = [
+    {
+        id: 't1',
+        name: 'MCG Weekly Challenge',
+        description: 'Post your best 18-hole score this week',
+        format: 'Stroke Play (Net)',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 604800000),
+        participants: 128,
+        maxParticipants: 256,
+        status: 'ACTIVE',
+        leaderboard: [
+            { rank: 1, playerId: 'p1', playerName: 'Mike Johnson', score: -4, roundsPlayed: 2, movement: 'UP' },
+            { rank: 2, playerId: 'p2', playerName: 'Sarah Davis', score: -3, roundsPlayed: 1, movement: 'SAME' },
+            { rank: 3, playerId: 'p3', playerName: 'Tom Wilson', score: -2, roundsPlayed: 2, movement: 'DOWN' }
+        ]
+    },
+    {
+        id: 't2',
+        name: 'Short Game Showdown',
+        description: 'Best Up & Down percentage wins',
+        format: 'Skills Challenge',
+        startDate: new Date(Date.now() + 86400000 * 3),
+        endDate: new Date(Date.now() + 86400000 * 10),
+        entryFee: 10,
+        prize: '$500 Pro Shop Credit',
+        participants: 64,
+        maxParticipants: 128,
+        status: 'UPCOMING',
+        leaderboard: []
+    }
+];
+
+export const MOCK_SG_HISTORY: StrokesGained[] = [
+    {
+        roundId: 'r1',
+        date: new Date(Date.now() - 86400000 * 1),
+        courseName: 'Medalist Golf Club',
+        offTheTee: 0.8,
+        approach: -0.5,
+        aroundGreen: 0.3,
+        putting: -0.2,
+        total: 0.4,
+        benchmarkHandicap: 5,
+        totalStrokes: 74,
+        coursePar: 72
+    },
+    {
+        roundId: 'r2',
+        date: new Date(Date.now() - 86400000 * 4),
+        courseName: 'PGA National',
+        offTheTee: 0.5,
+        approach: 1.2,
+        aroundGreen: -0.3,
+        putting: 0.5,
+        total: 1.9,
+        benchmarkHandicap: 5,
+        totalStrokes: 71,
+        coursePar: 72
+    },
+    {
+        roundId: 'r3',
+        date: new Date(Date.now() - 86400000 * 8),
+        courseName: 'Seminole',
+        offTheTee: -0.3,
+        approach: 0.2,
+        aroundGreen: 0.8,
+        putting: -0.8,
+        total: -0.1,
+        benchmarkHandicap: 5,
+        totalStrokes: 75,
+        coursePar: 72
+    },
+    {
+        roundId: 'r4',
+        date: new Date(Date.now() - 86400000 * 12),
+        courseName: 'Bear\'s Club',
+        offTheTee: 1.2,
+        approach: 0.6,
+        aroundGreen: 0.2,
+        putting: 0.3,
+        total: 2.3,
+        benchmarkHandicap: 5,
+        totalStrokes: 70,
+        coursePar: 72
+    },
+    {
+        roundId: 'r5',
+        date: new Date(Date.now() - 86400000 * 16),
+        courseName: 'Medalist Golf Club',
+        offTheTee: 0.1,
+        approach: -1.2,
+        aroundGreen: 0.5,
+        putting: -0.5,
+        total: -1.1,
+        benchmarkHandicap: 5,
+        totalStrokes: 77,
+        coursePar: 72
+    }
+];
+
+export const MOCK_GOLF_PROFILE: GolfProfile = {
+  handicap: 12.4,
+  handicapIndex: 12.4,
+  skillLevel: 'intermediate',
+  handPreference: 'right',
+  averageScore: 84,
+  drivingDistance: 245,
+  goals: ['Break 80', 'Hit more fairways', 'Improve putting'],
+  favoriteClub: '7 Iron',
+  playFrequency: 'weekly',
+};
+
+export const MOCK_PREFERENCES: AppPreferences = {
+  theme: 'system',
+  language: 'en',
+  distanceUnit: 'yards',
+  temperatureUnit: 'fahrenheit',
+  hapticFeedback: true,
+  soundEffects: true,
+  autoPlayVideos: true,
+  defaultCamera: 'back',
+  videoQuality: 'high',
+  offlineMode: false,
+  dataUsage: 'standard',
+};
+
+export const MOCK_PRIVACY_SETTINGS: PrivacySettings = {
+  profileVisibility: 'friends',
+  showHandicap: true,
+  showScores: true,
+  showLocation: false,
+  shareAnalytics: true,
+  personalizationData: true,
+  marketingEmails: false,
+  partnerOffers: false,
+};
+
+export const MOCK_LINKED_ACCOUNTS: LinkedAccount[] = [
+  { provider: 'google', email: 'john.doe@gmail.com', connected: true, lastSynced: '2025-07-15T10:00:00' },
+  { provider: 'apple', connected: false },
+  { provider: 'ghin', email: 'johndoe', connected: true, lastSynced: '2025-07-14T18:00:00' },
+  { provider: 'trackman', connected: false },
+];
+
+export const MOCK_SUBSCRIPTION: SubscriptionInfo = {
+  tier: 'premium',
+  status: 'active',
+  startDate: '2024-01-15',
+  renewalDate: '2025-01-15',
+  price: 9.99,
+  billingCycle: 'monthly',
+  features: [
+    'Unlimited swing analysis',
+    'AI coaching insights',
+    'Advanced statistics',
+    'No ads',
+    'Priority support',
+  ],
+};
+
+const generateMockShots = (holeNumber: number, par: number, score: number): Shot[] => {
+  const shots: Shot[] = [];
+  const putts = Math.min(score, Math.floor(Math.random() * 2) + 1);
+  const fullSwings = score - putts;
+
+  for (let i = 1; i <= fullSwings; i++) {
+    shots.push({
+      id: `shot-${holeNumber}-${i}`,
+      holeNumber,
+      shotNumber: i,
+      club: i === 1 ? (par >= 4 ? 'Driver' : '7 Iron') : ['7 Iron', '8 Iron', 'PW', 'SW'][Math.floor(Math.random() * 4)],
+      startLocation: { lat: 33.45 + Math.random() * 0.01, lng: -111.94 + Math.random() * 0.01 },
+      endLocation: { lat: 33.45 + Math.random() * 0.01, lng: -111.94 + Math.random() * 0.01 },
+      distance: i === 1 ? 240 + Math.floor(Math.random() * 40) : 80 + Math.floor(Math.random() * 80),
+      result: ['FAIRWAY', 'ROUGH', 'GREEN', 'BUNKER'][Math.floor(Math.random() * 4)] as any,
+      shape: ['STRAIGHT', 'FADE', 'DRAW'][Math.floor(Math.random() * 3)] as any,
+      missDirection: ['ON_TARGET', 'LEFT', 'RIGHT'][Math.floor(Math.random() * 3)] as any,
+    });
+  }
+
+  for (let i = 1; i <= putts; i++) {
+    shots.push({
+      id: `putt-${holeNumber}-${i}`,
+      holeNumber,
+      shotNumber: fullSwings + i,
+      club: 'Putter',
+      startLocation: { lat: 33.45, lng: -111.94 },
+      endLocation: { lat: 33.45, lng: -111.94 },
+      distance: i === 1 ? 15 + Math.floor(Math.random() * 20) : 2 + Math.floor(Math.random() * 3),
+      result: 'GREEN',
+    });
+  }
+
+  return shots;
+};
+
+const generateMockHoles = (): HoleScore[] => {
+  const pars = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 5, 4, 4, 3, 4, 5, 4];
+  return pars.map((par, index) => {
+    const variance = Math.floor(Math.random() * 3) - 1;
+    const score = par + variance + (Math.random() > 0.8 ? 1 : 0);
+    const shots = generateMockShots(index + 1, par, score);
+    const putts = shots.filter(s => s.club === 'Putter').length;
+
+    return {
+      holeNumber: index + 1,
+      par,
+      score,
+      shots,
+      putts,
+      fairwayHit: par >= 4 ? Math.random() > 0.4 : undefined,
+      greenInRegulation: score - putts <= par - 2,
+      upAndDown: !shots.some(s => s.result === 'GREEN' && s.shotNumber < score - putts) && putts <= 2,
+    };
+  });
+};
+
+export const MOCK_DETAILED_ROUND: DetailedRound = {
+  id: 'round-1',
+  courseName: 'TPC Scottsdale',
+  date: new Date('2024-03-20'),
+  tees: 'Blue',
+  courseRating: 72.1,
+  slopeRating: 131,
+  totalScore: 82,
+  score: 82,
+  par: 72,
+  holesPlayed: 18,
+  isCompleted: true,
+  putts: 32,
+  fairwaysHit: 8,
+  greensInRegulation: 9,
+  frontNine: 40,
+  backNine: 42,
+  holes: generateMockHoles(),
+  stats: {
+    fairwaysHit: 8,
+    fairwaysTotal: 14,
+    greensInRegulation: 9,
+    greensTotal: 18,
+    totalPutts: 32,
+    penalties: 1,
+    upAndDowns: 4,
+    upAndDownAttempts: 7,
+    sandSaves: 1,
+    sandSaveAttempts: 2,
+    birdiesOrBetter: 2,
+    pars: 8,
+    bogeys: 6,
+    doubleBogeyOrWorse: 2,
+    longestDrive: 285,
+    avgDriveDistance: 248,
+  },
+  conditions: {
+    weather: 'SUNNY',
+    temperature: 78,
+    windSpeed: 12,
+    windDirection: 'SW',
+    altitude: 1200,
+    humidity: 25
+  },
+};
+
+export const MOCK_COMPARISON_DETAILED_ROUND: DetailedRound = {
+  ...MOCK_DETAILED_ROUND,
+  id: 'round-2',
+  date: new Date('2024-02-15'),
+  totalScore: 86,
+  frontNine: 43,
+  backNine: 43,
+  holes: generateMockHoles(),
+  stats: {
+    ...MOCK_DETAILED_ROUND.stats,
+    fairwaysHit: 6,
+    greensInRegulation: 7,
+    totalPutts: 34,
+    birdiesOrBetter: 1,
+    bogeys: 8,
+    doubleBogeyOrWorse: 3,
+  },
+};
+
+export const MOCK_PATTERN_DATA: PatternData[] = [
+  { club: 'Driver', missCount: { left: 8, right: 12, short: 2, long: 3 }, hitRate: 58, avgDistance: 248, totalShots: 42 },
+  { club: '3 Wood', missCount: { left: 4, right: 6, short: 3, long: 1 }, hitRate: 52, avgDistance: 218, totalShots: 28 },
+  { club: '5 Iron', missCount: { left: 6, right: 4, short: 5, long: 2 }, hitRate: 48, avgDistance: 178, totalShots: 35 },
+  { club: '7 Iron', missCount: { left: 3, right: 5, short: 4, long: 3 }, hitRate: 62, avgDistance: 158, totalShots: 52 },
+  { club: 'PW', missCount: { left: 2, right: 3, short: 6, long: 4 }, hitRate: 68, avgDistance: 122, totalShots: 45 },
+];
+
+export const MOCK_TREND_ALERTS: TrendAlert[] = [
+  {
+    id: 'alert-1',
+    type: 'WARNING',
+    category: 'Putting',
+    message: 'Your 3-putt rate has increased by 15% over the last 5 rounds',
+    rounds: 5,
+    stat: '3-Putt Rate',
+    trend: 'UP',
+  },
+  {
+    id: 'alert-2',
+    type: 'POSITIVE',
+    category: 'Driving',
+    message: 'Fairway accuracy has improved from 45% to 58%',
+    rounds: 10,
+    stat: 'FIR %',
+    trend: 'UP',
+  },
+  {
+    id: 'alert-3',
+    type: 'INFO',
+    category: 'Approach',
+    message: 'Your GIR from 125-150 yards is below average',
+    rounds: 8,
+    stat: 'GIR 125-150y',
+    trend: 'STABLE',
+  },
+];
+
+export const MOCK_PUTTING_STATS: PuttingStats = {
+    puttsPerRound: 28.5,
+    oneFootMake: 99,
+    threeFootMake: 95,
+    sixFootMake: 72,
+    tenFootMake: 45,
+    fifteenFootMake: 22,
+    twentyFootMake: 12,
+    firstPuttProximity: 3.2,
+    threeputts: 0.8,
+    totalPutts: 1247,
+    roundsTracked: 44
+};
+
+export const TOUR_AVERAGES: PuttingStats = {
+    puttsPerRound: 29.0,
+    oneFootMake: 99.8,
+    threeFootMake: 96.5,
+    sixFootMake: 75,
+    tenFootMake: 50,
+    fifteenFootMake: 30,
+    twentyFootMake: 17,
+    firstPuttProximity: 2.8,
+    threeputts: 0.3,
+    totalPutts: 0,
+    roundsTracked: 0
+};
+
+export const PUTTING_GAMES: PuttingGame[] = [
+    {
+        id: 'horse',
+        name: 'H-O-R-S-E',
+        description: 'Classic match play putting game',
+        rules: [
+            'Opponent chooses putt distance and line',
+            'If they make it, you must match it',
+            'Miss and you get a letter',
+            'First to spell HORSE loses'
+        ],
+        icon: '🐴',
+        difficulty: 'MEDIUM'
+    },
+    {
+        id: 'around-world',
+        name: 'Around the World',
+        description: 'Make putts from every direction',
+        rules: [
+            'Set up balls at 8 positions around hole at 4 feet',
+            'Make all 8 in a row to complete',
+            'Miss and restart from position 1',
+            'Track best streak'
+        ],
+        icon: '🌍',
+        difficulty: 'HARD'
+    },
+    {
+        id: 'pressure-putt',
+        name: 'Pressure Putt Pro',
+        description: 'Simulate tournament pressure',
+        rules: [
+            '5 putts from increasing distances (3, 5, 7, 9, 12 ft)',
+            'Each putt worth increasing points',
+            'Miss any putt and game ends',
+            'Target: Complete all 5'
+        ],
+        icon: '🎯',
+        difficulty: 'HARD'
+    },
+    {
+        id: 'ladder',
+        name: 'Putting Ladder',
+        description: 'Master distance control',
+        rules: [
+            'Putts from 3, 6, 9, 12, 15 feet',
+            'Must make each distance to advance',
+            '3 attempts per distance',
+            'Track highest rung reached'
+        ],
+        icon: '🪜',
+        difficulty: 'MEDIUM'
+    }
+];
+
+export const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'n1',
+    type: 'achievement',
+    title: 'New Achievement Unlocked!',
+    message: 'You\'ve completed 50 practice sessions. Keep up the great work!',
+    timestamp: '2025-07-15T10:30:00',
+    status: 'unread',
+    priority: 'medium',
+    actionUrl: '/achievements',
+    actionLabel: 'View Achievement',
+  },
+  {
+    id: 'n2',
+    type: 'tournament',
+    title: 'Tournament Registration Open',
+    message: 'The Summer Championship is now accepting registrations. Limited spots available!',
+    timestamp: '2025-07-15T09:00:00',
+    status: 'unread',
+    priority: 'high',
+    actionUrl: '/tournaments/summer-championship',
+    actionLabel: 'Register Now',
+  },
+  {
+    id: 'n3',
+    type: 'weather',
+    title: 'Weather Alert',
+    message: 'Rain expected at 2 PM for your tee time at Pebble Beach. Consider rescheduling.',
+    timestamp: '2025-07-15T08:00:00',
+    status: 'unread',
+    priority: 'urgent',
+    actionUrl: '/tee-times',
+    actionLabel: 'View Options',
+  },
+  {
+    id: 'n4',
+    type: 'coaching',
+    title: 'AI Coach Insight',
+    message: 'Based on your recent rounds, focusing on short game could save you 3-4 strokes per round.',
+    timestamp: '2025-07-14T18:00:00',
+    status: 'read',
+    priority: 'medium',
+    actionUrl: '/coach',
+    actionLabel: 'Start Drill',
+  },
+];
+
+export const MOCK_HOLE: HoleData = {
+  number: 7,
+  par: 4,
+  yardage: 425,
+  handicapIndex: 3,
+  teeLocation: { lat: 33.45, lng: -111.94, elevation: 1200 },
+  greenCenter: { lat: 33.455, lng: -111.935, elevation: 1210 },
+  pinLocation: { lat: 33.4552, lng: -111.9348, elevation: 1210 },
+  hazards: [
+    {
+      id: 'haz-1',
+      type: 'WATER',
+      name: 'Lake - Left',
+      carryDistance: 220,
+      clearDistance: 250,
+      side: 'LEFT',
+      shape: [],
+    },
+    {
+      id: 'haz-2',
+      type: 'BUNKER',
+      name: 'Fairway Bunker - Right',
+      carryDistance: 245,
+      clearDistance: 265,
+      side: 'RIGHT',
+      shape: [],
+    },
+    {
+      id: 'haz-3',
+      type: 'BUNKER',
+      name: 'Greenside Bunker',
+      carryDistance: 410,
+      clearDistance: 420,
+      side: 'FRONT',
+      shape: [],
+    },
+  ],
+  layupTargets: [
+    {
+      id: 'layup-1',
+      name: 'Safe Layup',
+      distance: 210,
+      location: { lat: 33.452, lng: -111.938, elevation: 1205 },
+      leavesDistance: 165,
+      isSafe: true,
+    },
+    {
+      id: 'layup-2',
+      name: 'Aggressive',
+      distance: 255,
+      location: { lat: 33.453, lng: -111.937, elevation: 1207 },
+      leavesDistance: 120,
+      isSafe: false,
+    },
+  ],
+};
+
+export const MOCK_CONDITIONS: PlayingConditions = {
+  weather: 'SUNNY',
+  temperature: 72,
+  windSpeed: 12,
+  windDirection: 'NW',
+  altitude: 1200,
+  humidity: 35,
+};
+
+export const MOCK_CLUBS: ClubData[] = [
+  { name: 'Driver', avgDistance: 255, minDistance: 240, maxDistance: 275, dispersion: 28 },
+  { name: '3 Wood', avgDistance: 230, minDistance: 215, maxDistance: 245, dispersion: 22 },
+  { name: '5 Wood', avgDistance: 210, minDistance: 195, maxDistance: 225, dispersion: 20 },
+  { name: '4 Hybrid', avgDistance: 195, minDistance: 185, maxDistance: 210, dispersion: 18 },
+  { name: '5 Iron', avgDistance: 180, minDistance: 170, maxDistance: 190, dispersion: 16 },
+  { name: '6 Iron', avgDistance: 168, minDistance: 160, maxDistance: 178, dispersion: 14 },
+  { name: '7 Iron', avgDistance: 155, minDistance: 148, maxDistance: 165, dispersion: 12 },
+  { name: '8 Iron', avgDistance: 143, minDistance: 136, maxDistance: 152, dispersion: 10 },
+  { name: '9 Iron', avgDistance: 130, minDistance: 124, maxDistance: 138, dispersion: 9 },
+  { name: 'PW', avgDistance: 118, minDistance: 112, maxDistance: 126, dispersion: 8 },
+  { name: 'GW', avgDistance: 105, minDistance: 98, maxDistance: 112, dispersion: 8 },
+  { name: 'SW', avgDistance: 90, minDistance: 82, maxDistance: 98, dispersion: 10 },
+  { name: 'LW', avgDistance: 75, minDistance: 65, maxDistance: 85, dispersion: 12 },
+];
+
+export const MOCK_CADDIE_TIPS: CaddieTip[] = [
+  {
+    id: 'tip-1',
+    type: 'STRATEGY',
+    title: 'Play for Position',
+    message: "With water left, aim right-center of fairway. A 230-yard shot leaves you a comfortable 9-iron in.",
+    priority: 'HIGH',
+    icon: '🎯',
+  },
+  {
+    id: 'tip-2',
+    type: 'WIND',
+    title: 'Wind Adjustment',
+    message: 'NW wind at 12 mph - add 8 yards and aim slightly left.',
+    priority: 'MEDIUM',
+    icon: '💨',
+  },
+  {
+    id: 'tip-3',
+    type: 'PIN',
+    title: 'Pin Position',
+    message: 'Pin is back-left, tucked behind bunker. Safer play is center-right of green.',
+    priority: 'MEDIUM',
+    icon: '📍',
+  },
+  {
+    id: 'tip-4',
+    type: 'MENTAL',
+    title: 'Trust Your Swing',
+    message: "You've hit this club well today. Commit to your target and make a confident swing.",
+    priority: 'LOW',
+    icon: '💪',
+  },
+];
