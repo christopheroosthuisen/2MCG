@@ -81,7 +81,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
     const handleSourceSelect = (s: ImportSource) => {
         setSource(s);
         if (s === 'MANUAL') setStep('MANUAL_SCORE');
-        else if (s === 'SHOT_DOCTOR') setStep('INPUT_DATA');
+        else if (s === 'WEARABLE') setStep('INPUT_DATA'); // Mock wearable input
         else {
             setStep('PROCESSING');
             setTimeout(() => {
@@ -134,21 +134,17 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                             <Text className="text-gray-500 mb-8">Connect your devices or enter data manually.</Text>
                             
                             <div className="grid grid-cols-2 gap-3 mb-6">
-                                <button onClick={() => handleSourceSelect('ARCCOS')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
-                                    <span className="text-2xl">📱</span>
-                                    <span className="font-bold text-sm">Arccos</span>
-                                </button>
-                                <button onClick={() => handleSourceSelect('TRACKMAN')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
+                                <button onClick={() => handleSourceSelect('LAUNCH_MONITOR')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
                                     <span className="text-2xl">📡</span>
-                                    <span className="font-bold text-sm">TrackMan</span>
+                                    <span className="font-bold text-sm">Launch Monitor</span>
+                                </button>
+                                <button onClick={() => handleSourceSelect('WEARABLE')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
+                                    <span className="text-2xl">⌚</span>
+                                    <span className="font-bold text-sm">Wearable</span>
                                 </button>
                                 <button onClick={() => handleSourceSelect('MANUAL')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
                                     <span className="text-2xl">✏️</span>
-                                    <span className="font-bold text-sm">Scorecard</span>
-                                </button>
-                                <button onClick={() => handleSourceSelect('SHOT_DOCTOR')} className="p-4 border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all flex flex-col items-center gap-2">
-                                    <span className="text-2xl">🩺</span>
-                                    <span className="font-bold text-sm">Shot Doctor</span>
+                                    <span className="font-bold text-sm">Manual Entry</span>
                                 </button>
                             </div>
                         </div>

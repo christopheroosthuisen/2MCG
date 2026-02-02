@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { COLORS, MOCK_SWING_VIDEOS, MOCK_FOLDERS, MOCK_PRO_SWINGS } from '../constants';
 import { SwingVideo, VideoFolder, ProSwing, KeyPosition, SwingAngle, SwingAnalysis, Annotation } from '../types';
@@ -33,15 +34,16 @@ const mapAnalysisToVideo = (analysis: SwingAnalysis): SwingVideo => {
             angles: []
         })),
         annotations: analysis.annotations ? analysis.annotations
-            .filter(a => ['LINE', 'CIRCLE', 'ANGLE', 'ARROW', 'TEXT'].includes(a.type)) // Filter compatible types
-            .map((a, i) => ({
+            .filter(a => ['LINE', 'CIRCLE', 'ANGLE', 'ARROW', 'TEXT'].includes(a.type))
+            .map(a => ({
                  id: a.id,
                  type: a.type as Annotation['type'],
                  frameNumber: 0,
                  points: a.points,
                  color: a.color,
+                 strokeWidth: a.strokeWidth, // Added
                  text: ''
-            })) : []
+        })) : []
     };
 };
 

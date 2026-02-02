@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Tab } from './types';
+import { Tab, SwingAnalysis } from './types';
 import { Text, Button, Card, Badge, Input, ProgressBar, QuickAction } from './components/UIComponents';
 import { VideoRecorder, AnalysisResult, AnalyzeView } from './components/AnalysisViews';
 import { LearnSystem } from './components/LearnViews';
@@ -139,13 +139,32 @@ const App: React.FC = () => {
         setSubScreen(null);
     };
 
+    const handleRecordingComplete = (videoUrl: string, thumbUrl: string) => {
+        const newSwing: SwingAnalysis = {
+            id: crypto.randomUUID(),
+            date: new Date(),
+            videoUrl: videoUrl,
+            thumbnailUrl: thumbUrl,
+            clubUsed: 'DRIVER', // Default, could be selectable
+            tags: ['New Import'],
+            metrics: {},
+            feedback: [],
+            keyframes: [],
+            score: 0,
+            annotations: []
+        };
+        db.addSwing(newSwing);
+        setIsRecording(false);
+        setSubScreen({ type: 'ANALYSIS_RESULT', id: newSwing.id });
+    };
+
     // --- Sub-Screen Rendering Logic ---
     if (showOnboarding) {
         return <Onboarding onComplete={completeOnboarding} />;
     }
 
     if (isRecording) {
-        return <VideoRecorder onAnalysisComplete={(res) => { setIsRecording(false); setSubScreen({ type: 'ANALYSIS_RESULT', id: res.id }); }} onCancel={() => setIsRecording(false)} />;
+        return <VideoRecorder onComplete={handleRecordingComplete} onCancel={() => setIsRecording(false)} />;
     }
     
     if (showNotifications) {
@@ -160,298 +179,261 @@ const App: React.FC = () => {
         if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'WARMUP') return <div className="min-h-screen bg-white"><WarmupView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'SUBSCRIPTION') return <div className="min-h-screen bg-white"><SubscriptionView onBack={() => setSubScreen(null)} /></div>;
+        if (subScreen.type === 'ON_COURSE') return <div className="min-h-screen bg-white"><OnCourseView onBack={() => setSubScreen(null)} /></div>;
     }
 
+    // Responsive Desktop Sidebar
+    const Sidebar = () => (
+        <div className="hidden md:flex flex-col w-64 bg-gray-900 text-white h-screen fixed left-0 top-0 border-r border-gray-800 z-40">
+            <div className="p-6 border-b border-gray-800">
+                <Text variant="h2" color="white" className="mb-0">MCG</Text>
+                <Text variant="caption" className="text-gray-500">Mayo Conservatory of Golf</Text>
+            </div>
+            
+            <nav className="flex-1 p-4 space-y-2">
+                {[
+                    { id: 'HOME', icon: <Icons.Home />, label: 'Dashboard' },
+                    { id: 'PRACTICE', icon: <Icons.Target />, label: 'Practice' },
+                    { id: 'ANALYZE', icon: <Icons.Camera />, label: 'Analyze' },
+                    { id: 'LEARN', icon: <Icons.Book />, label: 'Learn' },
+                    { id: 'SOCIAL', icon: <Icons.User />, label: 'Community' },
+                    { id: 'PROFILE', icon: <Icons.User />, label: 'Profile' },
+                ].map((item) => (
+                    <button
+                        key={item.id}
+                        onClick={() => navigateTo(item.id as Tab)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentTab === item.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/20' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                    >
+                        {item.icon}
+                        <span className="font-bold text-sm">{item.label}</span>
+                    </button>
+                ))}
+            </nav>
+
+            <div className="p-4 border-t border-gray-800">
+                <button 
+                    onClick={toggleLiveMode}
+                    className={`w-full p-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition-all ${isLiveActive ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                >
+                    {isLiveActive ? <Icons.MicOff /> : <Icons.Mic />}
+                    {isLiveActive ? 'End Live Coach' : 'Live Coach'}
+                </button>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-[#F5F5F7] text-[#111827] font-sans selection:bg-orange-100">
-            <main className="max-w-md mx-auto min-h-screen bg-[#F5F5F7] shadow-2xl relative overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto px-4 hide-scrollbar pb-32">
-                    {currentTab === 'HOME' && (
-                        <div className="space-y-8 pt-6 pb-8 screen-enter">
-                            {/* Header */}
-                            <header className="flex justify-between items-center px-2">
-                                <div>
-                                    <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-0.5">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
-                                    <Text variant="h2" className="text-gray-900 leading-tight tracking-tight">{getGreeting(user.name.split(' ')[0])}</Text>
-                                    
-                                    {/* Streak Widget */}
-                                    <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full mt-2 inline-flex border border-orange-100 animate-in fade-in zoom-in duration-300">
-                                        <span className="text-lg">🔥</span>
-                                        <span className="font-bold text-orange-600 text-xs">{user.stats.streak} Day Streak</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div 
-                                        className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                                        onClick={() => setSubScreen({ type: 'SUBSCRIPTION' })}
-                                    >
-                                        <span className="text-yellow-500 text-sm"><Icons.Coin /></span>
-                                        <span className="text-gray-900 font-bold text-xs">{user.credits}</span>
-                                    </div>
-                                    <button 
-                                        className="relative p-2.5 text-gray-500 hover:text-gray-900 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
-                                        onClick={() => setShowNotifications(true)}
-                                    >
-                                        <Icons.Bell />
-                                        {unreadCount > 0 && (
-                                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                                        )}
-                                    </button>
-                                    <div className="relative group cursor-pointer transition-transform hover:scale-105" onClick={() => navigateTo('PROFILE')}>
-                                        <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md">
-                                            <img src={user.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </header>
+        <div className="min-h-screen bg-[#F5F5F7]">
+            {/* Desktop Sidebar */}
+            <Sidebar />
 
-                            {/* Quick Actions Grid */}
+            {/* Mobile Bottom Nav */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50 safe-area-bottom">
+                {[
+                    { id: 'HOME', icon: <Icons.Home />, label: 'Home' },
+                    { id: 'PRACTICE', icon: <Icons.Target />, label: 'Practice' },
+                    { id: 'ANALYZE', icon: <Icons.Camera />, label: 'Analyze' },
+                    { id: 'LEARN', icon: <Icons.Book />, label: 'Learn' },
+                    { id: 'PROFILE', icon: <Icons.User />, label: 'Profile' },
+                ].map((item) => (
+                    <button
+                        key={item.id}
+                        onClick={() => navigateTo(item.id as Tab)}
+                        className={`flex flex-col items-center gap-1 p-2 transition-colors ${currentTab === item.id ? 'text-orange-500' : 'text-gray-400'}`}
+                    >
+                        <div className="text-2xl">{item.icon}</div>
+                        <span className="text-[10px] font-bold">{item.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Main Content Area */}
+            <div className="md:ml-64 min-h-screen relative">
+                {/* Global Live Coach Overlay */}
+                {isLiveActive && (
+                    <div className="fixed bottom-24 right-4 z-50 md:bottom-8 md:right-8">
+                        <div className="bg-black/80 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom">
+                            <div className="relative">
+                                <div className="w-12 h-12 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center animate-pulse">
+                                    <Icons.Mic />
+                                </div>
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>
+                            </div>
                             <div>
-                                <Text variant="h4" className="mb-3 px-2 text-sm font-bold uppercase tracking-wider text-gray-400">Improvement Hub</Text>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <QuickAction 
-                                        icon="📥" 
-                                        label="Import" 
-                                        onClick={() => setIsUploadWizardOpen(true)} 
-                                    />
-                                    <QuickAction 
-                                        icon="⛳" 
-                                        label="Practice" 
-                                        onClick={() => navigateTo('PRACTICE')} 
-                                    />
-                                    <QuickAction 
-                                        icon="📹" 
-                                        label="Analyze" 
-                                        onClick={() => navigateTo('ANALYZE')} 
-                                    />
-                                </div>
+                                <div className="text-sm font-bold">AI Coach Listening...</div>
+                                <div className="text-xs text-gray-400">Ask about your swing or strategy</div>
                             </div>
-
-                            {/* AI Insight / Report Widget */}
-                            <div className="relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
-                                <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl transform rotate-1 opacity-50 blur-sm group-hover:rotate-2 transition-transform"></div>
-                                <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden shadow-xl">
-                                    <div className="absolute top-0 right-0 p-6 opacity-10"><Icons.Activity /></div>
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400 border border-white/10 backdrop-blur-md flex-shrink-0 animate-pulse">
-                                            <span className="text-xl">💡</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <Text variant="h4" color="white" className="text-xs font-bold uppercase tracking-wider mb-1 text-gray-400">AI Insight</Text>
-                                            <Text className="text-base font-medium leading-snug mb-3">Your driver spin rate is averaging 2900rpm (+400 vs target). Try teeing the ball slightly higher.</Text>
-                                            <div className="flex gap-2">
-                                                <Button size="sm" variant="outline" className="text-xs h-8 px-3 border-gray-600 text-gray-300 hover:bg-white/5 hover:text-white hover:border-gray-400">View Data</Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="primary" 
-                                                    className="text-xs h-8 px-3 bg-orange-600 hover:bg-orange-500 border-none shadow-orange-900/20"
-                                                    onClick={() => openChatWithContext("How can I fix my high driver spin rate? I'm averaging 2900rpm.")}
-                                                >
-                                                    Fix It
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </div>
-
-                            {/* Key Stats Row (Enhanced) */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <Card className="col-span-2 bg-white p-5 border border-gray-100 shadow-sm rounded-3xl">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <Text variant="metric-label" className="text-gray-400">Handicap Index</Text>
-                                            <div className="flex items-baseline gap-2">
-                                                <Text variant="metric" className="text-5xl text-gray-900 tracking-tighter mt-1">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
-                                                <span className="text-sm font-bold text-gray-400">HCP</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 text-green-600 mt-2 text-xs font-bold bg-green-50 px-2 py-1 rounded-full inline-block border border-green-100">
-                                                <span>↓</span> 0.3 this month
-                                            </div>
-                                        </div>
-                                        {/* Mini visual trend */}
-                                        <div className="flex items-end gap-1.5 h-16 opacity-80">
-                                            {[40, 55, 35, 70, 50, 80, 65].map((h, i) => (
-                                                <div key={i} className="w-3 bg-gray-900 rounded-t-sm" style={{ height: `${h}%`, opacity: (i+3)/10 }} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </Card>
-                                
-                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border border-gray-100 bg-white">
-                                    <div className="absolute right-[-20px] top-[-20px] bg-orange-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
-                                    <div>
-                                        <Text variant="caption" className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Active Goal</Text>
-                                        <Text variant="h3" className="text-lg leading-tight mt-1 line-clamp-2 min-h-[3rem] text-gray-900">{db.getGoals()[0]?.title || 'Set Goal'}</Text>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
-                                            <span>Progress</span>
-                                            <span>{db.getGoals()[0]?.progress || 0}%</span>
-                                        </div>
-                                        <ProgressBar progress={db.getGoals()[0]?.progress || 0} className="h-1.5" />
-                                    </div>
-                                </Card>
-
-                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border border-gray-100 cursor-pointer bg-white" onClick={() => setIsRecording(true)}>
-                                    <div className="absolute right-[-20px] top-[-20px] bg-blue-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
-                                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-2">
-                                        <Icons.Camera />
-                                    </div>
-                                    <div>
-                                        <Text variant="h4" className="text-base font-bold text-gray-900">Record Swing</Text>
-                                        <Text variant="caption" className="text-xs text-gray-500">AI Analysis</Text>
-                                    </div>
-                                </Card>
-                            </div>
+                            <button onClick={toggleLiveMode} className="p-2 hover:bg-white/10 rounded-full"><Icons.Close /></button>
                         </div>
-                    )}
-                    {currentTab === 'PRACTICE' && <div className="screen-enter"><PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} onAskCoach={openChatWithContext} /></div>}
-                    {currentTab === 'LEARN' && <div className="screen-enter"><LearnSystem /></div>}
-                    
-                    {/* Updated Analyze Tab Structure */}
-                    {currentTab === 'ANALYZE' && (
-                        <div className="screen-enter flex flex-col h-full">
-                            <div className="px-4 pt-6 pb-2 bg-[#F5F5F7]/95 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200/50">
-                                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Data & Video</Text>
-                                <Text variant="h1" className="mb-4">Analyze</Text>
-                                <div className="flex gap-2">
-                                    <button 
-                                        onClick={() => setAnalyzeTab('VIDEO')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'VIDEO' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                                    >
-                                        Video
-                                    </button>
-                                    <button 
-                                        onClick={() => setAnalyzeTab('SG')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'SG' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                                    >
-                                        Gained
-                                    </button>
-                                    <button 
-                                        onClick={() => setAnalyzeTab('STATS')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'STATS' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                                    >
-                                        Stats
-                                    </button>
-                                    <button 
-                                        onClick={() => setAnalyzeTab('REPLAY')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'REPLAY' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                                    >
-                                        Replay
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="flex-1 pt-4">
-                                {analyzeTab === 'VIDEO' && <SwingLibrary onRecord={() => setIsRecording(true)} />}
-                                {analyzeTab === 'SG' && <StrokesGainedDashboard />}
-                                {analyzeTab === 'STATS' && <StatisticsHub />}
-                                {analyzeTab === 'REPLAY' && <RoundReplayHub onBack={() => setAnalyzeTab('VIDEO')} />}
-                            </div>
-                        </div>
-                    )}
-                    
-                    {currentTab === 'PROFILE' && <div className="screen-enter"><ProfileView /></div>}
-                    {currentTab === 'SOCIAL' && <div className="screen-enter"><SocialHub /></div>}
-                </div>
+                    </div>
+                )}
 
-                {/* Floating Navigation Bar */}
-                <div className="absolute bottom-6 left-4 right-4 z-40 safe-area-bottom">
-                    <nav className="bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl px-2 py-3 flex justify-between items-center border border-white/10">
-                        <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
-                        <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
-                        <div className="relative -top-6">
-                            <button 
-                                onClick={() => setIsChatOpen(true)}
-                                className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full shadow-lg shadow-orange-500/40 flex items-center justify-center text-white hover:scale-105 transition-transform border-4 border-[#F5F5F7]"
-                            >
-                                <Icons.Message />
-                            </button>
-                        </div>
-                        <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
-                        <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
-                    </nav>
-                </div>
-
-                {/* AI Caddie Chat Overlay */}
+                {/* Chat Interface Overlay */}
                 {isChatOpen && (
-                    <div className="absolute inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-bottom duration-300">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 safe-area-top">
-                            <div>
-                                <Text variant="h4">AI Caddie</Text>
-                                <Text variant="caption" className="text-xs">Powered by Gemini 3 Pro • Search • Maps</Text>
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end">
+                        <div className="w-full md:w-96 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                <h3 className="font-bold text-gray-900">AI Caddie Chat</h3>
+                                <button onClick={() => setIsChatOpen(false)}><Icons.Close /></button>
                             </div>
-                            <button onClick={() => setIsChatOpen(false)} className="p-2 text-gray-500 bg-white rounded-full shadow-sm border border-gray-200 hover:bg-gray-50"><Icons.Close /></button>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
-                            {messages.length === 0 && !isLiveActive && (
-                                <div className="text-center text-gray-400 mt-20">
-                                    <p className="mb-4">Ask me about course rules, local weather, or strategy.</p>
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                        <button onClick={() => setInput("What's the weather at Pebble Beach?")} className="text-xs bg-white border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors shadow-sm">Weather @ Pebble</button>
-                                        <button onClick={() => setInput("Explain the new drop rule")} className="text-xs bg-white border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors shadow-sm">Drop Rules</button>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                {messages.map((msg, i) => (
+                                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+                                            {msg.text}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            
-                            {isLiveActive && (
-                                <div className="absolute inset-0 bg-gray-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white z-10 p-6 text-center">
-                                    <div className="w-24 h-24 rounded-full bg-orange-500 animate-pulse flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(249,115,22,0.5)]">
-                                        <Icons.Mic />
+                                ))}
+                                {loadingChat && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none flex gap-1">
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                                        </div>
                                     </div>
-                                    <h3 className="text-2xl font-bold mb-2">Live Coach Active</h3>
-                                    <p className="text-gray-400">Listening... Speak naturally to your coach.</p>
-                                    <Button variant="outline" className="mt-8 border-white/20 text-white hover:bg-white/10" onClick={toggleLiveMode}>End Session</Button>
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-gray-100">
+                                <div className="flex gap-2">
+                                    <input 
+                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 outline-none focus:border-orange-500 transition-colors"
+                                        placeholder="Ask about drills, rules..."
+                                        value={input}
+                                        onChange={e => setInput(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                                    />
+                                    <button onClick={handleSendChat} className="bg-orange-500 text-white p-2 rounded-xl hover:bg-orange-600 transition-colors">
+                                        <Icons.Send />
+                                    </button>
                                 </div>
-                            )}
-
-                            {messages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}>
-                                        {m.text}
-                                    </div>
-                                </div>
-                            ))}
-                            {loadingChat && <div className="text-xs text-gray-400 ml-4 animate-pulse">Thinking...</div>}
-                        </div>
-                        
-                        <div className="p-4 border-t border-gray-100 safe-area-bottom bg-white">
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={toggleLiveMode}
-                                    className={`p-3 rounded-xl transition-colors ${isLiveActive ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    {isLiveActive ? <Icons.MicOff /> : <Icons.Mic />}
-                                </button>
-                                <Input 
-                                    value={input} 
-                                    onChange={(e) => setInput(e.target.value)} 
-                                    placeholder="Ask your caddie..." 
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-                                    disabled={isLiveActive}
-                                />
-                                <Button onClick={handleSendChat} disabled={loadingChat || isLiveActive} className="px-3"><Icons.Send /></Button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {isUploadWizardOpen && <DataUploadWizard onClose={() => setIsUploadWizardOpen(false)} onComplete={() => {}} onAskCoach={openChatWithContext} />}
-            </main>
+                {/* Main Tab Rendering */}
+                <div className="h-full">
+                    {currentTab === 'HOME' && (
+                        <div className="p-4 space-y-6 pb-24">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <Text variant="caption" className="text-gray-500 uppercase font-bold tracking-wider">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+                                    <Text variant="h1">{getGreeting(user.name.split(' ')[0])}</Text>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button className="relative p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow" onClick={() => setShowNotifications(true)}>
+                                        <Icons.Bell />
+                                        {unreadCount > 0 && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>}
+                                    </button>
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm" onClick={() => navigateTo('PROFILE')}>
+                                        <img src={user.avatarUrl} className="w-full h-full object-cover" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Stats */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <Card variant="elevated" className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none relative overflow-hidden" onClick={() => navigateTo('ANALYZE')}>
+                                    <div className="relative z-10">
+                                        <div className="text-xs font-bold uppercase opacity-80 mb-1">Latest Swing</div>
+                                        <div className="text-3xl font-black mb-1">82 <span className="text-lg font-medium opacity-80">/ 100</span></div>
+                                        <div className="text-xs font-medium bg-white/20 inline-block px-2 py-0.5 rounded">View Analysis</div>
+                                    </div>
+                                    <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
+                                        <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path></svg>
+                                    </div>
+                                </Card>
+                                <Card variant="elevated" className="bg-white" onClick={() => navigateTo('PRACTICE')}>
+                                    <div className="text-xs font-bold text-gray-400 uppercase mb-1">Weekly Goal</div>
+                                    <div className="text-3xl font-black text-gray-900 mb-1">3 <span className="text-lg font-medium text-gray-400">/ 5</span></div>
+                                    <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2">
+                                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '60%' }}></div>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Main Actions */}
+                            <div>
+                                <Text variant="h3" className="mb-3">Quick Actions</Text>
+                                <div className="grid grid-cols-4 gap-3">
+                                    <QuickAction icon="⛳" label="Round" onClick={() => setSubScreen({ type: 'ON_COURSE' })} />
+                                    <QuickAction icon="🎯" label="Practice" onClick={() => navigateTo('PRACTICE')} />
+                                    <QuickAction icon="📹" label="Analyze" onClick={() => setIsRecording(true)} />
+                                    <QuickAction icon="🧘" label="Warmup" onClick={() => setSubScreen({ type: 'WARMUP' })} />
+                                </div>
+                            </div>
+
+                            {/* Recent Activity / Feed Preview */}
+                            <div>
+                                <div className="flex justify-between items-center mb-3">
+                                    <Text variant="h3">Recent Activity</Text>
+                                    <button className="text-orange-500 text-xs font-bold" onClick={() => navigateTo('SOCIAL')}>View All</button>
+                                </div>
+                                <div className="space-y-3">
+                                    <Card className="flex items-center gap-4 p-4">
+                                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl">🏌️</div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-sm">Round at Pebble Beach</div>
+                                            <div className="text-xs text-gray-500">Score: 74 (+2) • 2 days ago</div>
+                                        </div>
+                                        <Badge variant="success">Completed</Badge>
+                                    </Card>
+                                    <Card className="flex items-center gap-4 p-4">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl">🤖</div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-sm">Swing Analysis</div>
+                                            <div className="text-xs text-gray-500">Driver • Tempo Issue Detected</div>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-xs">82</div>
+                                    </Card>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {currentTab === 'PRACTICE' && <PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} onAskCoach={openChatWithContext} onToggleLive={toggleLiveMode} isLiveActive={isLiveActive} />}
+                    
+                    {currentTab === 'ANALYZE' && (
+                        <div className="pb-24">
+                            <div className="px-4 pt-6 bg-white sticky top-0 z-10">
+                                <Text variant="h1" className="mb-4">Analyze</Text>
+                                <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+                                    {['VIDEO', 'SG', 'STATS', 'REPLAY'].map((tab) => (
+                                        <button 
+                                            key={tab} 
+                                            onClick={() => setAnalyzeTab(tab as any)}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${analyzeTab === tab ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {analyzeTab === 'VIDEO' && <AnalyzeView onRecord={() => setIsRecording(true)} onSelectSwing={(id) => setSubScreen({ type: 'ANALYSIS_RESULT', id })} onUpload={() => setIsUploadWizardOpen(true)} />}
+                            {analyzeTab === 'SG' && <StrokesGainedDashboard />}
+                            {analyzeTab === 'STATS' && <StatisticsHub />}
+                            {analyzeTab === 'REPLAY' && <RoundReplayHub onBack={() => setAnalyzeTab('VIDEO')} />}
+                        </div>
+                    )}
+
+                    {currentTab === 'LEARN' && <LearnSystem />}
+                    {currentTab === 'SOCIAL' && <SocialHub />}
+                    {currentTab === 'PROFILE' && <ProfileView />}
+                </div>
+            </div>
+            
+            {/* Conditional Sub-screens that overlay full viewport */}
+            {subScreen?.type === 'ON_COURSE' && (
+                <div className="fixed inset-0 z-50 bg-white">
+                    <OnCourseView />
+                    <button onClick={() => setSubScreen(null)} className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white z-50">
+                        <Icons.Close />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
-
-const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; }> = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`relative flex flex-col items-center gap-1 transition-all w-16 group`}>
-        <div className={`w-6 h-6 transition-colors duration-200 ${active ? 'text-orange-500 stroke-[2.5px]' : 'text-gray-400 group-hover:text-gray-200'}`}>
-            {icon}
-        </div>
-        <span className={`text-[9px] font-bold transition-colors duration-200 ${active ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>{label}</span>
-        {active && <div className="absolute -bottom-2 w-1 h-1 bg-orange-500 rounded-full" />}
-    </button>
-);
 
 export default App;

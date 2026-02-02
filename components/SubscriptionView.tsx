@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { ScreenHeader, Card, Button, Badge } from './UIComponents';
 import { COLORS, SUBSCRIPTION_PLANS, CREDIT_PACKAGES } from '../constants';
@@ -32,7 +33,7 @@ export const SubscriptionView: React.FC<{ onBack: () => void }> = ({ onBack }) =
     const handleUpdateSubscription = (plan: SubscriptionPlan) => {
         if(plan.tier === user.memberStatus) return;
         if(confirm(`Switch to ${plan.name} plan?`)) {
-            db.updateSubscription(plan.tier === 'FREE' ? 'free' : plan.tier === 'PRO' ? 'premium' : 'pro');
+            db.updateSubscription(plan.tier === 'FREE' ? 'free' : plan.tier === 'PRO' ? 'premium' : 'tour');
             alert(`Switched to ${plan.name} Plan`);
         }
     };

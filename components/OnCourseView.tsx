@@ -97,7 +97,7 @@ export const OnCourseView: React.FC = () => {
                     <div>
                         <Text variant="h3" className="mb-3">Nearby Courses</Text>
                         <div className="space-y-3">
-                            {['Pebble Beach Golf Links', 'Spyglass Hill', 'Spanish Bay'].map((course, i) => (
+                            {['Seaside Links', 'Forest Dunes', 'Desert Canyon'].map((course, i) => (
                                 <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center cursor-pointer hover:border-green-500 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
@@ -143,7 +143,7 @@ const ActiveRoundView: React.FC<{ onEndRound: () => void }> = ({ onEndRound }) =
             <div className="px-4 py-3 flex justify-between items-center bg-black/40 backdrop-blur-md safe-area-top z-20 absolute top-0 left-0 right-0">
                 <button onClick={onEndRound} className="text-gray-300 hover:text-white text-xs font-bold bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-sm">Exit</button>
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">TPC Scottsdale</span>
+                    <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">MCG Championship Course</span>
                     <span className="text-lg font-black font-mono">Hole {hole.number} <span className="text-gray-500 font-normal">|</span> Par {hole.par}</span>
                 </div>
                 <div className="bg-green-600 px-3 py-1 rounded-lg text-sm font-bold shadow-lg shadow-green-900/50">E</div>

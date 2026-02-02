@@ -4,14 +4,15 @@ import { COLORS, MOCK_PUTTING_STATS, PUTTING_GAMES, TOUR_AVERAGES } from '../con
 import { PuttingStats, GreenReading } from '../types';
 import { ScreenHeader, Card, Button, Badge } from './UIComponents';
 
-const AimPointCalculator: React.FC = () => {
-    const [slope, setSlope] = useState(2);
+const BreakCalculator: React.FC = () => {
+    const [slope, setSlope] = useState(1.5);
     const [distance, setDistance] = useState(10);
-    const [stimp, setStimp] = useState(10);
+    const [stimp, setStimp] = useState(10.5);
     const [direction, setDirection] = useState<'LEFT' | 'RIGHT'>('RIGHT');
+    const [step, setStep] = useState<'CALIBRATE' | 'MEASURE' | 'READ'>('MEASURE');
 
     const result = useMemo(() => {
-        // Simplified physics
+        // Physics-based break calculation
         const breakAmt = (slope / 100) * Math.sqrt(distance) * (stimp / 10) * 12;
         return {
             breakInches: Math.round(breakAmt * 10) / 10,
@@ -21,32 +22,108 @@ const AimPointCalculator: React.FC = () => {
     }, [slope, distance, stimp]);
 
     return (
-        <Card variant="elevated" className="border-t-4 border-t-green-600 p-0 overflow-hidden">
-            <div className="bg-green-50 p-4 border-b border-green-100 flex justify-between items-center">
-                <h3 className="font-bold text-green-900">AimPoint Calc</h3>
-                <span className="text-xs font-bold text-green-700 bg-white px-2 py-1 rounded-lg shadow-sm">Green Reading</span>
+        <Card variant="elevated" className="border-t-4 border-t-green-600 p-0 overflow-hidden shadow-2xl">
+            <div className="bg-black p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <span className="text-xl">⛳</span>
+                    <div>
+                        <h3 className="font-bold text-white text-sm">Green Read</h3>
+                        <p className="text-[10px] text-gray-400">Slope & Break Assistant</p>
+                    </div>
+                </div>
+                <Badge variant="success" className="bg-green-600 text-white border-none">Active</Badge>
             </div>
-            <div className="p-5 space-y-5">
-                <div>
-                    <div className="flex justify-between mb-2 text-sm font-bold text-gray-700"><span>Slope</span><span>{slope}%</span></div>
-                    <input type="range" min="0" max="6" step="0.5" value={slope} onChange={e => setSlope(Number(e.target.value))} className="w-full accent-green-600" />
+
+            <div className="flex flex-col md:flex-row h-full">
+                {/* Control Panel */}
+                <div className="bg-gray-50 p-6 flex-1 space-y-6">
+                    <div>
+                        <div className="flex justify-between mb-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Putt Distance</span>
+                            <span className="text-lg font-black text-gray-900">{distance}' 0"</span>
+                        </div>
+                        <input type="range" min="3" max="50" value={distance} onChange={e => setDistance(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                        <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-bold">
+                            <span>3ft</span>
+                            <span>50ft</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex justify-between mb-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Green Speed (Stimp)</span>
+                            <span className="text-lg font-black text-gray-900">{stimp}</span>
+                        </div>
+                        <input type="range" min="7" max="14" step="0.5" value={stimp} onChange={e => setStimp(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                        <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-bold">
+                            <span>Slow (7)</span>
+                            <span>Tour (14)</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex justify-between mb-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Side Slope</span>
+                            <span className="text-lg font-black text-gray-900">{slope}%</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setDirection('LEFT')} 
+                                className={`flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all ${direction === 'LEFT' ? 'bg-green-600 text-white border-green-600 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}
+                            >
+                                Left Break
+                            </button>
+                            <button 
+                                onClick={() => setDirection('RIGHT')} 
+                                className={`flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all ${direction === 'RIGHT' ? 'bg-green-600 text-white border-green-600 shadow-lg' : 'bg-white text-gray-400 border-gray-200'}`}
+                            >
+                                Right Break
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <div className="flex justify-between mb-2 text-sm font-bold text-gray-700"><span>Distance</span><span>{distance} ft</span></div>
-                    <input type="range" min="3" max="30" value={distance} onChange={e => setDistance(Number(e.target.value))} className="w-full accent-green-600" />
-                </div>
-                <div>
-                    <div className="flex justify-between mb-2 text-sm font-bold text-gray-700"><span>Stimp</span><span>{stimp}</span></div>
-                    <input type="range" min="7" max="14" step="0.5" value={stimp} onChange={e => setStimp(Number(e.target.value))} className="w-full accent-green-600" />
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={() => setDirection('LEFT')} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${direction === 'LEFT' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600'}`}>Left Break</button>
-                    <button onClick={() => setDirection('RIGHT')} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${direction === 'RIGHT' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600'}`}>Right Break</button>
-                </div>
-                <div className="bg-gray-900 text-white rounded-xl p-4 text-center">
-                    <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Aim Target</div>
-                    <div className="text-3xl font-black mb-1">{result.aimInches}" {direction === 'LEFT' ? 'Right' : 'Left'}</div>
-                    <div className="text-sm text-gray-400 font-medium">({result.cupEdges} cups out)</div>
+
+                {/* Visualization Panel */}
+                <div className="bg-gray-900 flex-1 p-6 relative overflow-hidden flex flex-col items-center justify-center text-white min-h-[300px]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-800 via-gray-900 to-black opacity-50"></div>
+                    
+                    {/* Aim Arrow Visualization */}
+                    <div className="relative w-48 h-48 mb-6">
+                        {/* Center Ball */}
+                        <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_15px_rgba(255,255,255,0.5)] z-20"></div>
+                        
+                        {/* Target Line (Ghost) */}
+                        <div className="absolute top-0 bottom-1/2 left-1/2 w-0.5 bg-gray-700 -translate-x-1/2 origin-bottom"></div>
+
+                        {/* Break Arrow */}
+                        <div 
+                            className="absolute top-1/2 left-1/2 w-24 h-24 origin-top-left -translate-y-full"
+                            style={{ 
+                                transform: `rotate(${direction === 'RIGHT' ? -45 : -135}deg) scale(${0.5 + (slope/4)})`,
+                                transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                            }}
+                        >
+                            <svg viewBox="0 0 100 100" className="w-full h-full text-yellow-400 fill-current filter drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                                <path d="M50 0 L100 50 L70 50 L70 100 L30 100 L30 50 L0 50 Z" />
+                            </svg>
+                        </div>
+
+                        {/* Text Overlay */}
+                        <div className={`absolute top-1/2 ${direction === 'RIGHT' ? 'right-0 translate-x-12' : 'left-0 -translate-x-12'} -translate-y-1/2 text-2xl font-black text-yellow-400`}>
+                            {slope}%
+                        </div>
+                    </div>
+
+                    <div className="text-center z-10">
+                        <div className="text-5xl font-black mb-1 leading-none">{result.aimInches}"</div>
+                        <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
+                            {direction === 'LEFT' ? 'Right' : 'Left'} of Center
+                        </div>
+                        <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full border border-white/10">
+                            <span className="text-lg">⛳</span>
+                            <span className="font-bold text-sm">{result.cupEdges} Cups Outside</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Card>
@@ -116,7 +193,7 @@ export const PuttingLabView: React.FC<{ onBack: () => void }> = ({ onBack }) => 
             <div className="px-4 space-y-6">
                 {tab === 'TRAIN' && (
                     <>
-                        <AimPointCalculator />
+                        <BreakCalculator />
                         <PuttingSpeedTrainer />
                         <div className="space-y-3">
                             <h3 className="font-bold text-gray-900">Mini Games</h3>

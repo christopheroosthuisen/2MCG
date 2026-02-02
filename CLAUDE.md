@@ -1,8 +1,9 @@
-# MCG (Master Club Golf) - Web Application
+
+# MCG (Mayo Conservatory of Golf) - Web Application
 
 ## Overview
 
-MCG is a premium golf training web application designed by Joe Mayo (TrackMan Maestro). While inspired by a React Native specification, this implementation targets modern web browsers using React 18, tailored for mobile-first responsive usage.
+MCG is a premium golf training web application designed by Joe Mayo (The TrackMan Maestro). This implementation targets modern web browsers using React 18, tailored for mobile-first responsive usage.
 
 ## Tech Stack
 
@@ -29,7 +30,7 @@ MCG is a premium golf training web application designed by Joe Mayo (TrackMan Ma
 ├── types.ts              # Global Type Definitions
 ├── constants.ts          # Global Constants, Theme & Mock Data
 ├── services/
-│   └── geminiService.ts  # Google GenAI Integration
+│   └── geminiService.ts  # AI Integration
 └── components/
     ├── UIComponents.tsx  # Reusable UI (Button, Card, Badge, Inputs, ProgressBar)
     └── AnalysisViews.tsx # Complex views (VideoRecorder, SkeletonOverlay, Metrics)
@@ -49,7 +50,7 @@ MCG is a premium golf training web application designed by Joe Mayo (TrackMan Ma
 - **Drawing Tools**: Toolbar for Lines, Angles, Circles.
 
 ### 3. Dashboard & Data
-- **TrackMan-style Metrics**: Displays Club Speed, Ball Speed, Smash Factor, etc.
+- **Launch Monitor Metrics**: Displays Club Speed, Ball Speed, Efficiency, etc.
 - **Progress Tracking**: Visual progress bars for drills and lessons.
 - **Feedback System**: Categorized AI feedback with severity levels.
 

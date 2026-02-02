@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { PracticeGoal, TrackManSession, Drill, SwingAnalysis } from '../types';
-import { COLORS } from '../constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { PracticeGoal, PracticeSession, Drill, SwingAnalysis, PracticeShot } from '../types';
+import { COLORS, MOCK_SESSIONS } from '../constants';
 import { Text, Card, Badge, ProgressBar, Button, Input, Tabs, Modal } from './UIComponents';
 import { db } from '../services/dataService';
 import { PuttingLabView } from './PuttingLabView';
@@ -21,16 +21,32 @@ const Icons = {
     Minus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
     Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
     Grid: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
-    Target: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+    Target: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
+    Mic: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>,
+    Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+    Share: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
 };
 
-export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onAskCoach?: (msg: string) => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onAskCoach }) => {
+export const PracticeSystem: React.FC<{ 
+    onOpenTempoTool: () => void; 
+    onOpenBagOfShots: () => void; 
+    onAskCoach?: (msg: string) => void;
+    onToggleLive?: () => void;
+    isLiveActive?: boolean;
+    initialDrill?: Drill; // Optional drill to start with
+    onExit?: () => void;
+}> = ({ onOpenTempoTool, onOpenBagOfShots, onAskCoach, onToggleLive, isLiveActive, initialDrill, onExit }) => {
     const [activeTab, setActiveTab] = useState('DASHBOARD');
-    const [isSessionActive, setIsSessionActive] = useState(false);
+    const [isSessionActive, setIsSessionActive] = useState(!!initialDrill);
     const [showPuttingLab, setShowPuttingLab] = useState(false);
 
     if (showPuttingLab) {
         return <PuttingLabView onBack={() => setShowPuttingLab(false)} />;
+    }
+
+    if (initialDrill && isSessionActive) {
+        return <PracticeTimer drill={initialDrill} onClose={() => { setIsSessionActive(false); if(onExit) onExit(); }} onToggleLive={onToggleLive} isLiveActive={isLiveActive} />;
     }
 
     return (
@@ -44,7 +60,7 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOf
                     </Button>
                 </div>
                 <Tabs 
-                    tabs={['DASHBOARD', 'GOALS', 'HISTORY', 'SWINGS']} 
+                    tabs={['DASHBOARD', 'PERFORMANCE', 'GOALS', 'HISTORY', 'SWINGS']} 
                     activeTab={activeTab} 
                     onTabChange={setActiveTab} 
                 />
@@ -52,25 +68,33 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOf
 
             <div className="px-4">
                 {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} onOpenPuttingLab={() => setShowPuttingLab(true)} onAskCoach={onAskCoach} />}
+                {activeTab === 'PERFORMANCE' && <PerformanceDashboard />}
                 {activeTab === 'GOALS' && <GoalsView onAskCoach={onAskCoach} />}
                 {activeTab === 'HISTORY' && <HistoryView />}
                 {activeTab === 'SWINGS' && <SwingLibraryView />}
             </div>
 
             {isSessionActive && (
-                <div className="fixed bottom-24 left-4 right-4 z-40 animate-in slide-in-from-bottom duration-300">
-                    <PracticeTimer onClose={() => setIsSessionActive(false)} />
+                <div className="fixed inset-0 z-50 animate-in slide-in-from-bottom duration-300">
+                    <PracticeTimer onClose={() => setIsSessionActive(false)} onToggleLive={onToggleLive} isLiveActive={isLiveActive} />
                 </div>
             )}
         </div>
     );
 };
 
-const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const PracticeTimer: React.FC<{ drill?: Drill; onClose: () => void; onToggleLive?: () => void; isLiveActive?: boolean }> = ({ drill, onClose, onToggleLive, isLiveActive }) => {
     const [seconds, setSeconds] = useState(0);
     const [isActive, setIsActive] = useState(true);
-    const [shots, setShots] = useState(0);
-    const [isMinimized, setIsMinimized] = useState(false);
+    const [selectedClub, setSelectedClub] = useState('Driver');
+    const [sessionShots, setSessionShots] = useState<PracticeShot[]>([]);
+    
+    // Derived Stats
+    const totalShots = sessionShots.length;
+    const pureCount = sessionShots.filter(s => s.result === 'PURE').length;
+    const consistency = totalShots > 0 ? Math.round((pureCount / totalShots) * 100) : 0;
+
+    const clubs = ['Driver', '3 Wood', 'Hybrid', '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron', 'PW', 'SW', 'LW'];
 
     useEffect(() => {
         let interval: any = null;
@@ -91,78 +115,224 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    const handleLogShot = (result: PracticeShot['result']) => {
+        const newShot: PracticeShot = {
+            id: crypto.randomUUID(),
+            timestamp: new Date(),
+            club: selectedClub,
+            result: result
+        };
+        setSessionShots(prev => [newShot, ...prev]);
+    };
+
     const handleEndSession = () => {
-        const newSession: TrackManSession = {
+        if (totalShots === 0) {
+            onClose();
+            return;
+        }
+        
+        const newSession: PracticeSession = {
             id: crypto.randomUUID(),
             date: new Date(),
             location: 'The Lab',
-            shotsHit: shots,
-            club: 'DRIVER', 
+            shotsHit: totalShots,
+            club: selectedClub as any, // Simplified for demo
             avgMetrics: {},
             bestMetrics: {},
-            consistencyScore: 85, 
-            notes: `Session duration: ${formatTime(seconds)}`
+            consistencyScore: consistency, 
+            notes: `Duration: ${formatTime(seconds)}`,
+            shots: sessionShots,
+            drillId: drill?.id
         };
         db.addSession(newSession);
         onClose();
     };
 
-    if (isMinimized) {
-         return (
-            <div className="bg-orange-500 text-white rounded-full px-4 py-2 shadow-lg flex items-center justify-between gap-4 cursor-pointer" onClick={() => setIsMinimized(false)}>
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    <span className="font-mono font-bold">{formatTime(seconds)}</span>
-                </div>
-                <span className="text-xs font-bold uppercase">{shots} Shots</span>
-            </div>
-         );
-    }
+    const ShotButton: React.FC<{ result: PracticeShot['result']; label: string; color: string }> = ({ result, label, color }) => (
+        <button 
+            onClick={() => handleLogShot(result)}
+            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-95 ${color} hover:brightness-95`}
+        >
+            <span className="text-xl font-bold">{label}</span>
+        </button>
+    );
 
     return (
-        <div className="bg-[#111827] text-white rounded-3xl p-5 shadow-2xl shadow-black/50 border border-gray-700">
-            <div className="flex justify-between items-start mb-4">
+        <div className="h-full bg-gray-900 text-white flex flex-col">
+            {/* Header */}
+            <div className="p-4 flex items-center justify-between border-b border-gray-800 bg-[#111827] safe-area-top">
                 <div>
-                    <Text variant="caption" className="text-orange-500 font-bold uppercase tracking-widest text-[10px]">Active Session</Text>
-                    <div className="font-mono text-4xl font-black tracking-tight mt-1">{formatTime(seconds)}</div>
+                    <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-1">{drill ? drill.title.toUpperCase() : 'ACTIVE SESSION'}</div>
+                    <div className="font-mono text-3xl font-black">{formatTime(seconds)}</div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => setIsMinimized(true)} className="p-2 hover:bg-white/10 rounded-full text-gray-400">
-                        <Icons.Minus />
-                    </button>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <Button variant="danger" size="sm" onClick={handleEndSession}>Finish</Button>
+                    <button onClick={onClose} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 text-gray-400">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-white/5 rounded-2xl p-3 flex flex-col items-center justify-center border border-white/10">
-                    <span className="text-3xl font-bold">{shots}</span>
-                    <span className="text-[10px] text-gray-400 uppercase font-bold">Shots Hit</span>
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                
+                {/* Stats Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">{drill ? 'Progress' : 'Shots Hit'}</div>
+                        <div className="text-3xl font-black">{totalShots}{drill?.goalCount ? <span className="text-lg text-gray-500 font-medium">/{drill.goalCount}</span> : ''}</div>
+                    </div>
+                    <div className="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Consistency</div>
+                        <div className={`text-3xl font-black ${consistency >= 80 ? 'text-green-500' : consistency >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>{consistency}%</div>
+                    </div>
                 </div>
-                <div className="bg-white/5 rounded-2xl p-3 flex flex-col items-center justify-center border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setShots(s => s + 1)}>
-                    <Icons.Plus />
-                    <span className="text-[10px] text-gray-400 uppercase font-bold mt-1">Log Shot</span>
-                </div>
-            </div>
 
-            <div className="flex gap-3">
-                <Button 
-                    variant={isActive ? 'secondary' : 'primary'} 
-                    fullWidth 
-                    onClick={() => setIsActive(!isActive)}
-                    icon={isActive ? <Icons.Play /> : <Icons.Play />}
-                >
-                    {isActive ? 'Pause' : 'Resume'}
-                </Button>
-                <Button variant="danger" onClick={handleEndSession} icon={<Icons.Stop />}>
-                    End
-                </Button>
+                {/* Club Selector */}
+                <div>
+                    <div className="flex justify-between items-end mb-2">
+                        <span className="text-xs font-bold text-gray-400 uppercase">Select Club</span>
+                        <span className="text-orange-500 font-bold text-sm">{selectedClub}</span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                        {clubs.map(c => (
+                            <button
+                                key={c}
+                                onClick={() => setSelectedClub(c)}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border ${selectedClub === c ? 'bg-white text-gray-900 border-white' : 'bg-gray-800 text-gray-400 border-gray-700'}`}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Shot Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-3">
+                        <ShotButton result="PURE" label="🔥 PURE" color="bg-green-600 border-green-500 text-white" />
+                    </div>
+                    <ShotButton result="LEFT" label="← Left" color="bg-gray-800 border-gray-700 text-gray-300" />
+                    <ShotButton result="SHORT" label="↓ Short" color="bg-gray-800 border-gray-700 text-gray-300" />
+                    <ShotButton result="RIGHT" label="Right →" color="bg-gray-800 border-gray-700 text-gray-300" />
+                    <ShotButton result="THIN" label="Thin" color="bg-gray-800 border-gray-700 text-gray-400 text-xs" />
+                    <ShotButton result="LONG" label="↑ Long" color="bg-gray-800 border-gray-700 text-gray-300" />
+                    <ShotButton result="FAT" label="Fat" color="bg-gray-800 border-gray-700 text-gray-400 text-xs" />
+                </div>
+
+                {/* Coach Integration */}
+                {onToggleLive && (
+                    <button 
+                        onClick={onToggleLive}
+                        className={`w-full p-4 rounded-2xl flex items-center justify-center gap-3 transition-all border ${isLiveActive ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' : 'bg-blue-600 border-blue-500 text-white'}`}
+                    >
+                        <Icons.Mic />
+                        <span className="font-bold">{isLiveActive ? 'Live Coach Active (Tap to End)' : 'Connect Virtual Coach'}</span>
+                    </button>
+                )}
+
+                {/* History List */}
+                <div>
+                    <div className="text-xs font-bold text-gray-400 uppercase mb-3 border-b border-gray-800 pb-2">Session History</div>
+                    <div className="space-y-2">
+                        {sessionShots.map((shot, i) => (
+                            <div key={shot.id} className="flex justify-between items-center p-3 bg-gray-800 rounded-xl border border-gray-700 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-500 font-mono w-6">#{totalShots - i}</span>
+                                    <span className="font-bold text-sm">{shot.club}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                        shot.result === 'PURE' ? 'bg-green-500/20 text-green-400' : 
+                                        ['LEFT', 'RIGHT'].includes(shot.result) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
+                                    }`}>
+                                        {shot.result}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500">{shot.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</span>
+                                </div>
+                            </div>
+                        ))}
+                        {sessionShots.length === 0 && (
+                            <div className="text-center text-gray-600 text-xs py-4">No shots logged yet.</div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
+
+const PerformanceDashboard: React.FC = () => {
+    return (
+        <div className="bg-[#111827] text-white p-4 rounded-3xl -mx-4 md:mx-0 min-h-screen">
+            <div className="flex justify-between items-center mb-6">
+                <Text variant="h2" color="white" className="mb-0">PERFORMANCE</Text>
+                <div className="flex gap-4 text-gray-400">
+                    <Icons.Settings />
+                    <span className="text-xs font-bold uppercase tracking-wider">SHARE</span>
+                </div>
+            </div>
+
+            <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold uppercase tracking-wider">Practice Discipline</span>
+                    <span className="text-2xl font-bold text-blue-400">72%</span>
+                </div>
+                <div className="w-full bg-gray-800 rounded-full h-4 mb-1">
+                    <div className="bg-blue-500 h-4 rounded-full" style={{ width: '72%' }}></div>
+                </div>
+                <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
+                    <span>Slacking</span>
+                    <span>Grinding</span>
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                <div className="flex justify-between text-xs font-bold text-gray-500 uppercase mb-2">
+                    <span>Scores Breakdown</span>
+                    <span>Progress</span>
+                </div>
+
+                {[
+                    { label: 'OFF THE TEE', value: 45, color: 'bg-purple-500' },
+                    { label: 'APPROACH', value: 60, color: 'bg-blue-500' },
+                    { label: 'SHORT GAME', value: 25, color: 'bg-green-500' },
+                    { label: 'PUTTING', value: 80, color: 'bg-yellow-500' },
+                    { label: 'RECOVERY', value: 10, color: 'bg-red-500' },
+                ].map((stat) => (
+                    <div key={stat.label}>
+                        <div className="flex justify-between mb-2">
+                            <span className="font-bold">{stat.label}</span>
+                            <span className="font-mono">{stat.value}%</span>
+                        </div>
+                        <div className="w-full bg-gray-800 rounded-full h-3">
+                            <div className={`${stat.color} h-3 rounded-full`} style={{ width: `${stat.value}%` }}></div>
+                        </div>
+                        <div className="mt-1 text-[10px] text-gray-600 font-bold uppercase tracking-wider">Discipline</div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-10 pt-6 border-t border-gray-800">
+                <Text variant="caption" className="uppercase font-bold text-gray-500 mb-4">Insights</Text>
+                <div className="space-y-4">
+                    <div>
+                        <div className="text-2xl font-bold">21</div>
+                        <div className="text-xs font-bold text-gray-500 uppercase">Drills Completed</div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold">1</div>
+                        <div className="text-xs font-bold text-gray-500 uppercase">Day of Practice</div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold">Less than 1</div>
+                        <div className="text-xs font-bold text-gray-500 uppercase">Hour of Practice</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onOpenPuttingLab: () => void; onAskCoach?: (msg: string) => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onOpenPuttingLab, onAskCoach }) => {
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
@@ -234,7 +404,7 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
             
             <section>
                  <Text variant="h3" className="mb-4 px-1">Tools</Text>
-                 <div className="grid grid-cols-1 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card variant="outlined" className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 group border-orange-100 bg-orange-50/30" onClick={onOpenTempoTool}>
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform"><Icons.Activity /></div>
@@ -250,7 +420,7 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
                             <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center group-hover:scale-110 transition-transform"><Icons.Target /></div>
                             <div>
                                 <Text variant="h4" className="text-base font-bold">Putting Lab</Text>
-                                <Text variant="caption" className="text-xs">AimPoint & Speed Training</Text>
+                                <Text variant="caption" className="text-xs">Green Reading & Speed</Text>
                             </div>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm group-hover:text-green-500"><Icons.ChevronRight /></div>
@@ -303,7 +473,7 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
 
             <section>
                 <Text variant="h3" className="mb-4 px-1">Recent Sessions</Text>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {sessions.slice(0, 3).map((session) => (
                         <Card key={session.id} className="p-4 cursor-pointer hover:bg-gray-50 border border-gray-100">
                             <div className="flex justify-between items-start mb-3">
@@ -328,7 +498,7 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
                             {session.notes && <Text variant="caption" className="text-xs italic bg-yellow-50 p-2 rounded text-yellow-800 border border-yellow-100">"{session.notes}"</Text>}
                         </Card>
                     ))}
-                    {sessions.length === 0 && <div className="text-center py-8 text-gray-400 text-sm">No practice sessions logged yet.</div>}
+                    {sessions.length === 0 && <div className="text-center py-8 text-gray-400 text-sm col-span-full">No practice sessions logged yet.</div>}
                 </div>
             </section>
         </div>
@@ -359,40 +529,97 @@ const GoalsView: React.FC<{ onAskCoach?: (msg: string) => void }> = ({ onAskCoac
                     </div>
                 </div>
             </div>
-            {goals.map((goal) => (
-                <Card key={goal.id} className="p-5 border-l-4 border-l-orange-500">
-                    <div className="flex justify-between items-start mb-4">
-                        <div><Text variant="h3">{goal.title}</Text><Text variant="caption" className="text-xs">Deadline: {goal.deadline?.toLocaleDateString()}</Text></div>
-                        <div className="text-right"><Text variant="metric" color={COLORS.primary}>{goal.currentValue} <span className="text-lg text-gray-400 font-normal">{goal.unit}</span></Text><Text variant="caption" className="text-xs">Target: {goal.targetValue} {goal.unit}</Text></div>
-                    </div>
-                    <ProgressBar progress={goal.progress} />
-                    <div className="flex justify-between mt-2 text-xs font-bold text-gray-400"><span>Start</span><span>{goal.progress}% Achieved</span><span>Goal</span></div>
-                </Card>
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {goals.map((goal) => (
+                    <Card key={goal.id} className="p-5 border-l-4 border-l-orange-500">
+                        <div className="flex justify-between items-start mb-4">
+                            <div><Text variant="h3">{goal.title}</Text><Text variant="caption" className="text-xs">Deadline: {goal.deadline?.toLocaleDateString()}</Text></div>
+                            <div className="text-right"><Text variant="metric" color={COLORS.primary}>{goal.currentValue} <span className="text-lg text-gray-400 font-normal">{goal.unit}</span></Text><Text variant="caption" className="text-xs">Target: {goal.targetValue} {goal.unit}</Text></div>
+                        </div>
+                        <ProgressBar progress={goal.progress} />
+                        <div className="flex justify-between mt-2 text-xs font-bold text-gray-400"><span>Start</span><span>{goal.progress}% Achieved</span><span>Goal</span></div>
+                    </Card>
+                ))}
+            </div>
         </div>
     );
 };
 
 const HistoryView: React.FC = () => {
     const sessions = db.getSessions();
+    const drills = db.getDrills();
+
+    // Helper to get shot details if detailed shots exist
+    const getShotData = (session: PracticeSession) => {
+        if (!session.shots || session.shots.length === 0) return null;
+        return session.shots;
+    };
+
     return (
         <div className="space-y-4">
              <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
                 {['All', 'Driver', 'Irons', 'Wedges'].map((cat, i) => (<button key={cat} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${i === 0 ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{cat}</button>))}
             </div>
-             {sessions.map((session) => (
-                <div key={session.id} className="flex gap-4 items-center p-3 border-b border-gray-100 last:border-0">
-                     <div className="w-12 h-12 bg-gray-100 rounded-lg flex flex-col items-center justify-center flex-shrink-0"><span className="text-xs font-bold text-gray-500">{session.date.toLocaleDateString(undefined, {month:'short'})}</span><span className="text-lg font-bold text-gray-900">{session.date.getDate()}</span></div>
-                     <div className="flex-1">
-                        <div className="flex justify-between"><Text variant="body" className="font-bold">{session.club} Session</Text><Text variant="caption" className="font-mono">{session.shotsHit} shots</Text></div>
-                        <div className="flex gap-3 mt-1">
-                            {session.avgMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Avg Speed: <b>{session.avgMetrics.clubSpeed}</b></span>}
-                            {session.bestMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Best: <b>{session.bestMetrics.clubSpeed}</b></span>}
+             <div className="grid grid-cols-1 gap-4">
+                 {sessions.map((session) => {
+                    const drill = session.drillId ? drills.find(d => d.id === session.drillId) : null;
+                    const shotData = getShotData(session);
+
+                    return (
+                        <div key={session.id} className="border border-gray-100 rounded-xl bg-white shadow-sm hover:shadow-md transition-all">
+                            {/* Summary Header */}
+                            <div className="flex gap-4 items-center p-3 cursor-pointer">
+                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex flex-col items-center justify-center flex-shrink-0"><span className="text-xs font-bold text-gray-500">{session.date.toLocaleDateString(undefined, {month:'short'})}</span><span className="text-lg font-bold text-gray-900">{session.date.getDate()}</span></div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between">
+                                        <Text variant="body" className="font-bold">{drill ? drill.title : `${session.club} Session`}</Text>
+                                        <Text variant="caption" className="font-mono">{session.shotsHit} shots</Text>
+                                    </div>
+                                    <div className="flex gap-3 mt-1">
+                                        {session.avgMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Avg Speed: <b>{session.avgMetrics.clubSpeed}</b></span>}
+                                        {session.bestMetrics.clubSpeed && <span className="text-xs bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">Best: <b>{session.bestMetrics.clubSpeed}</b></span>}
+                                    </div>
+                                </div>
+                                <Icons.ChevronRight />
+                            </div>
+
+                            {/* Detailed Shot List (Table View) - If shots exist */}
+                            {shotData && (
+                                <div className="border-t border-gray-100 bg-gray-50/50 p-2 overflow-x-auto">
+                                    <table className="w-full text-xs text-left">
+                                        <thead>
+                                            <tr className="text-gray-400 font-bold uppercase">
+                                                <th className="px-2 py-1">#</th>
+                                                <th className="px-2 py-1">Result</th>
+                                                <th className="px-2 py-1 text-center">Flexion</th>
+                                                <th className="px-2 py-1 text-center">Ulnar</th>
+                                                <th className="px-2 py-1 text-center">Rot</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {shotData.map((shot, idx) => (
+                                                <tr key={shot.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-100 transition-colors">
+                                                    <td className="px-2 py-2 font-mono text-gray-500">{idx + 1}</td>
+                                                    <td className="px-2 py-2">
+                                                        <span className={`px-1.5 py-0.5 rounded font-bold ${
+                                                            shot.result === 'PURE' ? 'bg-green-100 text-green-700' :
+                                                            shot.result === 'THIN' || shot.result === 'FAT' ? 'bg-red-100 text-red-700' :
+                                                            'bg-yellow-100 text-yellow-700'
+                                                        }`}>{shot.result}</span>
+                                                    </td>
+                                                    <td className="px-2 py-2 text-center font-bold">{shot.metrics?.wristFlexion || '-'}</td>
+                                                    <td className="px-2 py-2 text-center font-bold">{shot.metrics?.ulnarRadial || '-'}</td>
+                                                    <td className="px-2 py-2 text-center font-bold">{shot.metrics?.hipRotation || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
-                     </div>
-                     <Icons.ChevronRight />
-                </div>
-             ))}
+                    );
+                 })}
+             </div>
         </div>
     );
 };
@@ -400,7 +627,7 @@ const HistoryView: React.FC = () => {
 const SwingLibraryView: React.FC = () => {
     const swings = db.getSwings();
     return (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 cursor-pointer"><Icons.Plus /><span className="text-xs font-bold mt-2">Add Swing</span></div>
             {swings.map((swing) => (
                 <div key={swing.id} className="aspect-[3/4] rounded-2xl bg-gray-900 relative overflow-hidden group cursor-pointer shadow-sm">

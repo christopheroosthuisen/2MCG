@@ -1,11 +1,11 @@
 
-import { MOCK_USER_PROFILE, MOCK_RECENT_SWINGS, MOCK_SESSIONS, MOCK_GOALS, MOCK_COURSES, MOCK_DRILLS, MOCK_BAG_SLOTS, MOCK_ROUNDS, MOCK_WORKOUTS, MOCK_HANDICAP_HISTORY, MOCK_COACH, MOCK_TRANSACTIONS } from '../constants';
-import { UserProfile, SwingAnalysis, TrackManSession, PracticeGoal, BagShotSlot, Course, Drill, ActionLog, Club, OnCourseRound, Workout, HandicapRecord, CoachProfile, CreditTransaction, SubscriptionTier } from '../types';
+import { MOCK_USER_PROFILE, MOCK_RECENT_SWINGS, MOCK_SESSIONS, MOCK_GOALS, MOCK_COURSES, MOCK_DRILLS, MOCK_BAG_SLOTS, MOCK_ROUNDS, MOCK_WORKOUTS, MOCK_HANDICAP_HISTORY, MOCK_COACH, MOCK_TRANSACTIONS, MOCK_COMMUNITY_FEED, MOCK_COACHES_LIST } from '../constants';
+import { UserProfile, SwingAnalysis, PracticeSession, PracticeGoal, BagShotSlot, Course, Drill, ActionLog, Club, OnCourseRound, Workout, HandicapRecord, CoachProfile, CreditTransaction, SubscriptionTier, CommunityPost } from '../types';
 
 class DataService {
     private user: UserProfile;
     private swings: SwingAnalysis[];
-    private sessions: TrackManSession[];
+    private sessions: PracticeSession[];
     private goals: PracticeGoal[];
     private bagSlots: BagShotSlot[];
     private courses: Course[];
@@ -16,8 +16,10 @@ class DataService {
     private handicapHistory: HandicapRecord[];
     private coach: CoachProfile;
     private creditTransactions: CreditTransaction[];
+    private communityFeed: CommunityPost[];
+    private coaches: CoachProfile[];
 
-    private readonly STORAGE_KEY = 'mcg_app_data_v2';
+    private readonly STORAGE_KEY = 'mcg_app_data_v3';
 
     constructor() {
         // Try to load from local storage
@@ -39,6 +41,8 @@ class DataService {
                 this.handicapHistory = parsed.handicapHistory?.map((h: any) => ({ ...h, date: new Date(h.date) })) || [...MOCK_HANDICAP_HISTORY];
                 this.coach = parsed.coach || MOCK_COACH;
                 this.creditTransactions = parsed.creditTransactions?.map((t: any) => ({ ...t, date: new Date(t.date) })) || [...MOCK_TRANSACTIONS];
+                this.communityFeed = parsed.communityFeed?.map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) })) || [...MOCK_COMMUNITY_FEED];
+                this.coaches = parsed.coaches || [...MOCK_COACHES_LIST];
                 
                 // Ensure credits exist on legacy data
                 if (typeof this.user.credits === 'undefined') this.user.credits = 100;
@@ -66,6 +70,8 @@ class DataService {
         this.coach = MOCK_COACH;
         this.actionLog = [];
         this.creditTransactions = [...MOCK_TRANSACTIONS];
+        this.communityFeed = [...MOCK_COMMUNITY_FEED];
+        this.coaches = [...MOCK_COACHES_LIST];
         this.save();
     }
 
@@ -83,7 +89,9 @@ class DataService {
             workouts: this.workouts,
             handicapHistory: this.handicapHistory,
             coach: this.coach,
-            creditTransactions: this.creditTransactions
+            creditTransactions: this.creditTransactions,
+            communityFeed: this.communityFeed,
+            coaches: this.coaches
         };
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
@@ -106,6 +114,8 @@ class DataService {
     getHandicapHistory() { return this.handicapHistory; }
     getCoach() { return this.coach; }
     getCreditTransactions() { return this.creditTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()); }
+    getCommunityFeed() { return this.communityFeed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()); }
+    getCoaches() { return this.coaches; }
 
     // --- ACTIONS ---
 
@@ -115,7 +125,7 @@ class DataService {
         this.save();
     }
 
-    addSession(session: TrackManSession) {
+    addSession(session: PracticeSession) {
         this.sessions.unshift(session);
         this.logAction('ADD_SESSION', { id: session.id, shots: session.shotsHit });
         // Update streak logic (simplified)
@@ -258,6 +268,28 @@ class DataService {
         this.user.memberStatus = tier === 'free' ? 'FREE' : tier === 'premium' ? 'PRO' : 'TOUR'; // Mapping internal keys
         this.logAction('UPDATE_SUBSCRIPTION', { from: oldTier, to: this.user.memberStatus });
         this.save();
+    }
+
+    bookCoach(coachId: string, slot: string) {
+        const coach = this.coaches.find(c => c.id === coachId);
+        if (coach) {
+            // Assume booking costs credits
+            const success = this.spendCredits(coach.rate, `Session with ${coach.name} @ ${slot}`);
+            if (success) {
+                this.logAction('BOOK_COACH', { coach: coach.name, slot });
+                return true;
+            }
+        }
+        return false;
+    }
+
+    likePost(postId: string) {
+        const post = this.communityFeed.find(p => p.id === postId);
+        if (post) {
+            post.isLiked = !post.isLiked;
+            post.likes += post.isLiked ? 1 : -1;
+            this.save();
+        }
     }
 
     private logAction(type: ActionLog['type'], details: any) {
