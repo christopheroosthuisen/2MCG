@@ -47,6 +47,9 @@ export interface SwingMetrics {
     faceAngle?: number;
     efficiency?: number;
     attackAngle?: number;
+    wristFlexion?: number;
+    ulnarRadial?: number;
+    hipRotation?: number;
 }
 
 export interface SwingAnalysis {
@@ -130,7 +133,7 @@ export interface PracticeShot {
     timestamp: Date;
     club: string;
     result: 'PURE' | 'THIN' | 'FAT' | 'TOE' | 'HEEL' | 'LEFT' | 'RIGHT' | 'SHORT' | 'LONG';
-    metrics?: any;
+    metrics?: SwingMetrics;
 }
 
 export interface PracticeSession {
@@ -343,7 +346,7 @@ export interface Tournament {
     participants: number;
     maxParticipants: number;
     status: 'ACTIVE' | 'UPCOMING' | 'COMPLETED';
-    leaderboard: { rank: number; playerId: string; playerName: string; score: number; roundsPlayed: number; movement: 'UP' | 'DOWN' | 'SAME' }[];
+    leaderboard: { rank: number; playerId: string; playerName: string; score: number | string; roundsPlayed: number; movement: 'UP' | 'DOWN' | 'SAME' }[];
 }
 
 export interface StrokesGained {
@@ -390,7 +393,7 @@ export interface PrivacySettings {
 }
 
 export interface LinkedAccount {
-    provider: 'google' | 'apple' | 'generic';
+    provider: 'google' | 'apple' | 'sensor_kit'; // Generic sensor kit name
     email?: string;
     connected: boolean;
     lastSynced?: string;

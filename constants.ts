@@ -731,7 +731,7 @@ export const MOCK_PRIVACY_SETTINGS: PrivacySettings = {
 export const MOCK_LINKED_ACCOUNTS: LinkedAccount[] = [
     { provider: 'google', email: 'user@gmail.com', connected: true },
     { provider: 'apple', connected: false },
-    { provider: 'generic', connected: true, lastSynced: '2 days ago', name: 'Launch Monitor' }
+    { provider: 'sensor_kit', connected: true, lastSynced: '2 days ago', name: 'Launch Monitor' }
 ];
 
 export const MOCK_SUBSCRIPTION: SubscriptionInfo = {
@@ -817,9 +817,35 @@ export const TOUR_AVERAGES: Partial<PuttingStats> = {
 };
 
 export const MOCK_BAG_SLOTS: BagShotSlot[] = [
-    { id: 'bs1', title: 'Stock 7 Iron', distanceRange: '172-175 yards', lie: 'FAIRWAY', shape: 'STRAIGHT', trajectory: 'STANDARD', isMastered: true, masteryDate: new Date('2023-11-15') },
-    { id: 'bs2', title: 'Low Punch', distanceRange: '140-150 yards', lie: 'ROUGH', shape: 'DRAW', trajectory: 'LOW', isMastered: false },
-    { id: 'bs3', title: 'High Flop', distanceRange: '20-30 yards', lie: 'ROUGH', shape: 'STRAIGHT', trajectory: 'HIGH', isMastered: true, masteryDate: new Date('2024-01-20') }
+    {
+        id: 'bs1',
+        title: 'Stock 7 Iron',
+        distanceRange: '172-175 yards',
+        lie: 'FAIRWAY',
+        shape: 'STRAIGHT',
+        trajectory: 'STANDARD',
+        isMastered: true,
+        masteryDate: new Date('2023-11-15')
+    },
+    {
+        id: 'bs2',
+        title: 'Low Punch',
+        distanceRange: '140-150 yards',
+        lie: 'ROUGH',
+        shape: 'DRAW',
+        trajectory: 'LOW',
+        isMastered: false
+    },
+    {
+        id: 'bs3',
+        title: 'High Flop',
+        distanceRange: '20-30 yards',
+        lie: 'ROUGH',
+        shape: 'STRAIGHT',
+        trajectory: 'HIGH',
+        isMastered: true,
+        masteryDate: new Date('2024-01-20')
+    }
 ];
 
 export const MOCK_TRANSACTIONS: CreditTransaction[] = [
@@ -829,9 +855,34 @@ export const MOCK_TRANSACTIONS: CreditTransaction[] = [
 ];
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-    { id: 'plan_free', name: 'Free', price: 0, interval: 'monthly', features: ['Basic Swing Analysis', '3 Practice Drills', 'Score Tracking', 'Ad Supported'], tier: 'FREE', color: '#9CA3AF' },
-    { id: 'plan_pro', name: 'Pro', price: 9.99, interval: 'monthly', features: ['Unlimited Swing Analysis', 'Full Drill Library', 'AI Coach Insights', 'No Ads', '100 Monthly Credits'], isPopular: true, tier: 'PRO', color: COLORS.primary },
-    { id: 'plan_tour', name: 'Tour', price: 19.99, interval: 'monthly', features: ['Everything in Pro', 'Priority Live Lessons', 'Advanced Stats & SG', 'Exclusive Content', '300 Monthly Credits'], tier: 'TOUR', color: '#111827' }
+    {
+        id: 'plan_free',
+        name: 'Free',
+        price: 0,
+        interval: 'monthly',
+        features: ['Basic Swing Analysis', '3 Practice Drills', 'Score Tracking', 'Ad Supported'],
+        tier: 'FREE',
+        color: '#9CA3AF'
+    },
+    {
+        id: 'plan_pro',
+        name: 'Pro',
+        price: 9.99,
+        interval: 'monthly',
+        features: ['Unlimited Swing Analysis', 'Full Drill Library', 'AI Coach Insights', 'No Ads', '100 Monthly Credits'],
+        isPopular: true,
+        tier: 'PRO',
+        color: COLORS.primary
+    },
+    {
+        id: 'plan_tour',
+        name: 'Tour',
+        price: 19.99,
+        interval: 'monthly',
+        features: ['Everything in Pro', 'Priority Live Lessons', 'Advanced Stats & SG', 'Exclusive Content', '300 Monthly Credits'],
+        tier: 'TOUR',
+        color: '#111827'
+    }
 ];
 
 export const CREDIT_PACKAGES: CreditPackage[] = [

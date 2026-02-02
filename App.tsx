@@ -19,6 +19,7 @@ import { RoundReplayHub } from './components/RoundReplayView';
 import { Onboarding } from './components/Onboarding';
 import { NotificationsView } from './components/NotificationsView';
 import { SubscriptionView } from './components/SubscriptionView'; 
+import { OnCourseView } from './components/OnCourseView';
 import { askAICaddie, connectLiveCoach } from './services/geminiService';
 import { db } from './services/dataService';
 import { MOCK_NOTIFICATIONS } from './constants';
@@ -39,7 +40,7 @@ const Icons = {
     MicOff: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
 };
 
-// ... (Helper functions match previous)
+// Helper functions
 function timeAgo(date: Date) {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
@@ -171,6 +172,10 @@ const App: React.FC = () => {
         return <NotificationsView onBack={() => setShowNotifications(false)} onAskCoach={openChatWithContext} />;
     }
 
+    if (isUploadWizardOpen) {
+        return <DataUploadWizard onClose={() => setIsUploadWizardOpen(false)} onComplete={(stats) => { console.log('Data saved', stats); }} onAskCoach={openChatWithContext} />;
+    }
+
     // Render Sub-screens over the main layout
     if (subScreen) {
         if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} onAskCoach={openChatWithContext} />;
@@ -179,7 +184,7 @@ const App: React.FC = () => {
         if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'WARMUP') return <div className="min-h-screen bg-white"><WarmupView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'SUBSCRIPTION') return <div className="min-h-screen bg-white"><SubscriptionView onBack={() => setSubScreen(null)} /></div>;
-        if (subScreen.type === 'ON_COURSE') return <div className="min-h-screen bg-white"><OnCourseView onBack={() => setSubScreen(null)} /></div>;
+        if (subScreen.type === 'ON_COURSE') return <div className="min-h-screen bg-white"><OnCourseView /></div>;
     }
 
     // Responsive Desktop Sidebar
@@ -374,7 +379,7 @@ const App: React.FC = () => {
                                     <Card className="flex items-center gap-4 p-4">
                                         <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl">🏌️</div>
                                         <div className="flex-1">
-                                            <div className="font-bold text-sm">Round at Pebble Beach</div>
+                                            <div className="font-bold text-sm">Round at Seaside Links</div>
                                             <div className="text-xs text-gray-500">Score: 74 (+2) • 2 days ago</div>
                                         </div>
                                         <Badge variant="success">Completed</Badge>

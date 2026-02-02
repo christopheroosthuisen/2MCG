@@ -10,7 +10,7 @@ interface OnboardingProps {
 }
 
 const STEPS = [
-    { id: 'welcome', title: "Welcome to MCG", subtitle: "Master Club Golf", description: "Your AI-powered golf coach for swing analysis, practice, and course strategy.", icon: "⛳" },
+    { id: 'welcome', title: "Welcome to MCG", subtitle: "Mayo Conservatory of Golf", description: "Your AI-powered golf coach for swing analysis, practice, and course strategy.", icon: "⛳" },
     { id: 'profile', title: "Let's Get Started", subtitle: "Profile Setup", description: "Tell us a bit about yourself.", icon: "👤" },
     { id: 'golf_info', title: "Your Game", subtitle: "Golf Profile", description: "Help us personalize your training plan.", icon: "🏌️" },
     { id: 'goals', title: "Set Your Goals", subtitle: "Targets", description: "What do you want to achieve?", icon: "🎯" },
@@ -72,15 +72,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     <div className="space-y-4 px-4 w-full">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
-                            <input type="text" value={data.firstName} onChange={e => setData({...data, firstName: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="Tiger" />
+                            <input type="text" value={data.firstName} onChange={e => setData({...data, firstName: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="First Name" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
-                            <input type="text" value={data.lastName} onChange={e => setData({...data, lastName: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="Woods" />
+                            <input type="text" value={data.lastName} onChange={e => setData({...data, lastName: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="Last Name" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
-                            <input type="email" value={data.email} onChange={e => setData({...data, email: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="tiger@mcg.com" />
+                            <input type="email" value={data.email} onChange={e => setData({...data, email: e.target.value})} className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-lg" placeholder="email@example.com" />
                         </div>
                     </div>
                 );

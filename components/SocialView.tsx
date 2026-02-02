@@ -164,35 +164,38 @@ export const SocialHub: React.FC = () => {
 
     return (
         <div className="bg-[#F5F5F7] min-h-screen pb-24 animate-in fade-in duration-300">
-            <ScreenHeader 
-                title={activeTab === 'FEED' ? 'Clubhouse' : activeTab === 'COACHES' ? 'Find a Pro' : activeTab === 'COMPETE' ? 'Leaderboards' : 'Messages'} 
-                subtitle="Community" 
-                rightAction={
-                    activeTab === 'COACHES' ? (
-                        <div className="bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold border border-gray-100 flex items-center gap-1">
-                            <span>🪙</span> {user.credits}
-                        </div>
-                    ) : null
-                }
-            />
-            
-            <div className="px-4 mb-4 sticky top-[80px] z-10 bg-[#F5F5F7]/95 backdrop-blur pb-2 pt-2">
-                <Tabs 
-                    tabs={['FEED', 'COACHES', 'COMPETE', 'INBOX']} 
-                    activeTab={activeTab} 
-                    onTabChange={(t) => setActiveTab(t as any)} 
+            {/* Consolidated Sticky Header */}
+            <div className="sticky top-0 z-20 bg-[#F5F5F7]/95 backdrop-blur-md">
+                <ScreenHeader 
+                    title={activeTab === 'FEED' ? 'Clubhouse' : activeTab === 'COACHES' ? 'Find a Pro' : activeTab === 'COMPETE' ? 'Leaderboards' : 'Messages'} 
+                    subtitle="Community" 
+                    sticky={false} // Handled by parent
+                    rightAction={
+                        activeTab === 'COACHES' ? (
+                            <div className="bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold border border-gray-100 flex items-center gap-1">
+                                <span>🪙</span> {user.credits}
+                            </div>
+                        ) : null
+                    }
                 />
+                <div className="px-4 pb-2">
+                    <Tabs 
+                        tabs={['FEED', 'COACHES', 'COMPETE', 'INBOX']} 
+                        activeTab={activeTab} 
+                        onTabChange={(t) => setActiveTab(t as any)} 
+                    />
+                </div>
             </div>
 
-            <div className="px-4">
+            <div className="px-4 pt-2">
                 {activeTab === 'FEED' && (
-                    <div className="space-y-4 pb-8">
+                    <div className="space-y-4 pb-8 max-w-xl mx-auto">
                         {feed.map(post => <FeedPost key={post.id} post={post} />)}
                     </div>
                 )}
                 
                 {activeTab === 'COACHES' && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-w-xl mx-auto">
                         <Card className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-5 border-none mb-6">
                             <div className="flex justify-between items-center">
                                 <div>
@@ -218,7 +221,7 @@ export const SocialHub: React.FC = () => {
                 )}
                 
                 {activeTab === 'COMPETE' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-w-xl mx-auto">
                         <Card className="p-0 overflow-hidden">
                             <div className="bg-orange-500 p-4 text-white">
                                 <h3 className="font-bold">Global Ranking</h3>
@@ -250,7 +253,7 @@ export const SocialHub: React.FC = () => {
                 )}
 
                 {activeTab === 'INBOX' && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="flex flex-col items-center justify-center py-20 text-center max-w-xl mx-auto">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl mb-4">💬</div>
                         <h3 className="font-bold text-gray-900 mb-2">No Messages Yet</h3>
                         <p className="text-sm text-gray-500 max-w-xs">Book a coach to start a conversation or connect with friends.</p>

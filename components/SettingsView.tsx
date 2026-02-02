@@ -83,7 +83,7 @@ const AppPreferencesEditor: React.FC<{ preferences: AppPreferences; onUpdate: (u
 );
 
 const LinkedAccountCard: React.FC<{ account: LinkedAccount; onConnect: () => void; onDisconnect: () => void; }> = ({ account, onConnect, onDisconnect }) => {
-  const info: any = { google: { name: 'Google', icon: '🔵', color: '#4285F4' }, apple: { name: 'Apple', icon: '⚫', color: '#000000' } }[account.provider] || { name: account.name || account.provider, icon: '🔗', color: '#555' };
+  const info: any = { google: { name: 'Google', icon: '🔵', color: '#4285F4' }, apple: { name: 'Apple', icon: '⚫', color: '#000000' } }[account.provider] || { name: account.name || 'Sensor Kit', icon: '🔗', color: '#555' };
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100">
       <div className="flex items-center gap-3">
