@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PracticeGoal, TrackManSession, Drill, SwingAnalysis } from '../types';
 import { COLORS } from '../constants';
-import { Text, Card, Badge, ProgressBar, Button, Input, Tabs } from './UIComponents';
+import { Text, Card, Badge, ProgressBar, Button, Input, Tabs, Modal } from './UIComponents';
 import { db } from '../services/dataService';
 import { PuttingLabView } from './PuttingLabView';
 
@@ -35,12 +35,12 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOf
 
     return (
         <div className="space-y-6 pb-32 animate-in fade-in duration-500 relative">
-            <div className="px-1 pt-6 bg-white sticky top-0 z-10 pb-4">
+            <div className="px-4 pt-6 bg-[#F5F5F7]/95 backdrop-blur-md sticky top-0 z-10 pb-2">
                 <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">The Lab</Text>
                 <div className="flex justify-between items-end mb-4">
                     <Text variant="h1" className="mb-0">Practice Hub</Text>
                     <Button size="sm" variant="primary" icon={isSessionActive ? <Icons.TrendUp /> : <Icons.Plus />} onClick={() => setIsSessionActive(true)}>
-                        {isSessionActive ? 'View Active Session' : 'Start Session'}
+                        {isSessionActive ? 'Active Session' : 'Start Session'}
                     </Button>
                 </div>
                 <Tabs 
@@ -50,10 +50,12 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOf
                 />
             </div>
 
-            {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} onOpenPuttingLab={() => setShowPuttingLab(true)} />}
-            {activeTab === 'GOALS' && <GoalsView />}
-            {activeTab === 'HISTORY' && <HistoryView />}
-            {activeTab === 'SWINGS' && <SwingLibraryView />}
+            <div className="px-4">
+                {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} onOpenPuttingLab={() => setShowPuttingLab(true)} />}
+                {activeTab === 'GOALS' && <GoalsView />}
+                {activeTab === 'HISTORY' && <HistoryView />}
+                {activeTab === 'SWINGS' && <SwingLibraryView />}
+            </div>
 
             {isSessionActive && (
                 <div className="fixed bottom-24 left-4 right-4 z-40 animate-in slide-in-from-bottom duration-300">
@@ -139,7 +141,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <span className="text-3xl font-bold">{shots}</span>
                     <span className="text-[10px] text-gray-400 uppercase font-bold">Shots Hit</span>
                 </div>
-                <div className="bg-white/5 rounded-2xl p-3 flex flex-col items-center justify-center border border-white/10 cursor-pointer hover:bg-white/10" onClick={() => setShots(s => s + 1)}>
+                <div className="bg-white/5 rounded-2xl p-3 flex flex-col items-center justify-center border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setShots(s => s + 1)}>
                     <Icons.Plus />
                     <span className="text-[10px] text-gray-400 uppercase font-bold mt-1">Log Shot</span>
                 </div>
@@ -152,7 +154,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     onClick={() => setIsActive(!isActive)}
                     icon={isActive ? <Icons.Play /> : <Icons.Play />}
                 >
-                    {isActive ? 'Pause Timer' : 'Resume'}
+                    {isActive ? 'Pause' : 'Resume'}
                 </Button>
                 <Button variant="danger" onClick={handleEndSession} icon={<Icons.Stop />}>
                     End
@@ -164,10 +166,13 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onOpenPuttingLab: () => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onOpenPuttingLab }) => {
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
+    const [editGoalOpen, setEditGoalOpen] = useState(false);
     const goals = db.getGoals();
     const primaryGoal = goals[0];
     const drills = db.getDrills();
     const sessions = db.getSessions();
+
+    const [editingGoalValue, setEditingGoalValue] = useState(primaryGoal?.targetValue.toString() || '0');
 
     const filteredDrills = drills.filter(d => {
         if (drillFilter === 'ALL') return d.category === 'PUTTING' || d.category === 'CHIPPING' || d.category === 'BUNKER' || d.category === 'SHORT_GAME';
@@ -177,15 +182,22 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
 
     const getDifficultyLevel = (diff: string) => diff === 'ADVANCED' ? 3 : diff === 'INTERMEDIATE' ? 2 : 1;
 
+    const handleSaveGoal = () => {
+        if (primaryGoal) {
+            db.updateGoal(primaryGoal.id, { targetValue: Number(editingGoalValue) });
+            setEditGoalOpen(false);
+        }
+    };
+
     return (
         <div className="space-y-8">
             {primaryGoal && (
                 <section>
                     <div className="flex justify-between items-center mb-4 px-1">
                         <Text variant="h3">Primary Focus</Text>
-                        <Text variant="caption" className="text-orange-600 font-bold cursor-pointer">Edit Goal</Text>
+                        <Text variant="caption" className="text-orange-600 font-bold cursor-pointer" onClick={() => setEditGoalOpen(true)}>Edit Goal</Text>
                     </div>
-                    <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
+                    <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden shadow-lg shadow-gray-900/20">
                         <div className="absolute right-0 top-0 p-8 opacity-5">
                             <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
                         </div>
@@ -205,6 +217,18 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
                             <Text variant="caption" className="text-gray-400 text-xs">+2 {primaryGoal.unit} this week • {30} days remaining</Text>
                         </div>
                     </Card>
+
+                    <Modal isOpen={editGoalOpen} onClose={() => setEditGoalOpen(false)} title="Update Goal" footer={
+                        <div className="flex gap-2">
+                            <Button fullWidth variant="ghost" onClick={() => setEditGoalOpen(false)}>Cancel</Button>
+                            <Button fullWidth onClick={handleSaveGoal}>Save Changes</Button>
+                        </div>
+                    }>
+                        <div className="space-y-4">
+                            <Input label="Goal Title" defaultValue={primaryGoal.title} />
+                            <Input label={`Target Value (${primaryGoal.unit})`} type="number" value={editingGoalValue} onChange={(e) => setEditingGoalValue(e.target.value)} />
+                        </div>
+                    </Modal>
                 </section>
             )}
             
@@ -367,8 +391,8 @@ const SwingLibraryView: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
             <div className="aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 cursor-pointer"><Icons.Plus /><span className="text-xs font-bold mt-2">Add Swing</span></div>
             {swings.map((swing) => (
-                <div key={swing.id} className="aspect-[3/4] rounded-2xl bg-gray-900 relative overflow-hidden group cursor-pointer">
-                    <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+                <div key={swing.id} className="aspect-[3/4] rounded-2xl bg-gray-900 relative overflow-hidden group cursor-pointer shadow-sm">
+                    <img src={swing.thumbnailUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white"><Icons.Play /></div></div>
                     <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                         <Text variant="caption" color="white" className="font-bold text-xs mb-0.5">{swing.clubUsed}</Text>

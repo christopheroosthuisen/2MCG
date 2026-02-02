@@ -1,24 +1,35 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile, ClubCategory } from '../types';
 import { db } from '../services/dataService';
-import { Text, Card, Badge, Button, ProgressBar } from './UIComponents';
+import { Text, Card, Badge, Button, ProgressBar, Modal, Input } from './UIComponents';
 import { COLORS } from '../constants';
 import { SettingsHub } from './SettingsView';
+import { SubscriptionView } from './SubscriptionView';
 
 const Icons = {
-    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
     Edit: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
     TrendingUp: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>,
     Award: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>,
-    User: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+    User: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+    Coin: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
 };
 
 export const ProfileView: React.FC = () => {
-    const [showSettings, setShowSettings] = React.useState(false);
+    const [viewMode, setViewMode] = useState<'MAIN' | 'SETTINGS' | 'SUBSCRIPTION'>('MAIN');
+    const [isEditingDNA, setIsEditingDNA] = useState(false);
     const user = db.getUser();
     const handicapHistory = db.getHandicapHistory();
     const coach = db.getCoach();
+
+    // Local state for edits
+    const [dnaValues, setDnaValues] = useState(user.swingDNA);
+
+    const handleSaveDNA = () => {
+        db.updateUser({ swingDNA: dnaValues });
+        setIsEditingDNA(false);
+    };
 
     const bagByCategory: Record<string, typeof user.bag> = {
         'WOOD': user.bag.filter(c => c.category === 'WOOD'),
@@ -48,18 +59,36 @@ export const ProfileView: React.FC = () => {
         </div>
     );
 
-    if (showSettings) {
-        return <SettingsHub onBack={() => setShowSettings(false)} />;
+    if (viewMode === 'SETTINGS') {
+        return <SettingsHub onBack={() => setViewMode('MAIN')} />;
     }
+
+    if (viewMode === 'SUBSCRIPTION') {
+        return <SubscriptionView onBack={() => setViewMode('MAIN')} />;
+    }
+
+    const handleBookLesson = () => {
+        if(user.credits < 50) {
+            if(confirm("Not enough credits (50 required). Go to store?")) {
+                setViewMode('SUBSCRIPTION');
+            }
+        } else {
+            if(confirm("Book Lesson for 50 Credits?")) {
+                db.spendCredits(50, `Lesson with ${coach.name}`);
+                // Force refresh hack or use context in real app
+                setViewMode('MAIN'); 
+            }
+        }
+    };
 
     return (
         <div className="space-y-8 pb-32 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header Profile Card */}
-            <div className="px-1">
+            <div className="px-4">
                 <Card variant="filled" className="bg-white border border-gray-200 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-gray-900 to-gray-800"></div>
                     <button 
-                        onClick={() => setShowSettings(true)}
+                        onClick={() => setViewMode('SETTINGS')}
                         className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-10"
                     >
                         <Icons.Settings />
@@ -75,20 +104,45 @@ export const ProfileView: React.FC = () => {
                         </Text>
                         
                         <div className="flex justify-center gap-2">
-                            <Badge variant="dark">{user.memberStatus} Member</Badge>
+                            <div onClick={() => setViewMode('SUBSCRIPTION')} className="cursor-pointer">
+                                <Badge variant="dark">{user.memberStatus} Member</Badge>
+                            </div>
                             <Badge variant="info">HCP {user.swingDNA.handicap > 0 ? '+' : ''}{user.swingDNA.handicap}</Badge>
+                            <div onClick={() => setViewMode('SUBSCRIPTION')} className="cursor-pointer">
+                                <Badge variant="warning">🪙 {user.credits}</Badge>
+                            </div>
                         </div>
                     </div>
                 </Card>
             </div>
 
+            {/* Coach Connection */}
+            <section className="px-4">
+                <Text variant="h3" className="mb-3">My Coach</Text>
+                <div className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center shadow-sm">
+                    <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                        <img src={coach.avatarUrl} alt={coach.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1">
+                        <Text variant="h4" className="text-base font-bold">{coach.name}</Text>
+                        <Text variant="caption" className="text-xs">{coach.title} • {coach.location}</Text>
+                        <div className="flex gap-2 mt-2">
+                            <Button size="sm" variant="outline" className="text-xs h-8 px-3">Message</Button>
+                            <Button size="sm" variant="primary" className="text-xs h-8 px-3" onClick={handleBookLesson}>
+                                Book (50 <span className="ml-0.5 text-[8px]">🪙</span>)
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Handicap Tracker */}
-            <section className="px-1">
+            <section className="px-4">
                 <div className="flex justify-between items-center mb-3">
                     <Text variant="h3">Handicap Index</Text>
-                    <button className="text-orange-500 text-xs font-bold flex items-center gap-1">View History</button>
+                    <button className="text-orange-500 text-xs font-bold flex items-center gap-1 hover:underline">View History</button>
                 </div>
-                <Card variant="outlined" className="p-5">
+                <Card variant="outlined" className="p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-6">
                          <div>
                             <div className="text-4xl font-black text-gray-900 tracking-tighter">{user.swingDNA.handicap}</div>
@@ -107,40 +161,22 @@ export const ProfileView: React.FC = () => {
                                     className="w-full bg-orange-100 group-hover:bg-orange-200 rounded-t-sm transition-all relative"
                                     style={{ height: `${(h.index / 10) * 100}%` }}
                                 >
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white px-1 rounded">{h.index}</div>
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white px-1.5 py-0.5 rounded shadow-lg">{h.index}</div>
                                 </div>
-                                <div className="text-[9px] text-gray-400 mt-1">{h.date.getMonth()+1}/{h.date.getDate()}</div>
+                                <div className="text-[9px] text-gray-400 mt-1 font-medium">{h.date.getMonth()+1}/{h.date.getDate()}</div>
                             </div>
                         ))}
                     </div>
                 </Card>
             </section>
 
-            {/* Coach Connection */}
-            <section className="px-1">
-                <Text variant="h3" className="mb-3">My Coach</Text>
-                <div className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                        <img src={coach.avatarUrl} alt={coach.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                        <Text variant="h4" className="text-base font-bold">{coach.name}</Text>
-                        <Text variant="caption" className="text-xs">{coach.title} • {coach.location}</Text>
-                        <div className="flex gap-2 mt-2">
-                            <Button size="sm" variant="outline" className="text-xs h-7 px-2">Message</Button>
-                            <Button size="sm" variant="primary" className="text-xs h-7 px-2">Book Lesson</Button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Swing DNA */}
-            <section className="px-1">
+            <section className="px-4">
                 <div className="flex justify-between items-center mb-3">
                     <Text variant="h3">Swing DNA</Text>
-                    <button className="text-orange-500 text-xs font-bold flex items-center gap-1"><Icons.Edit /> Edit</button>
+                    <button onClick={() => setIsEditingDNA(true)} className="text-orange-500 text-xs font-bold flex items-center gap-1 hover:bg-orange-50 px-2 py-1 rounded transition-colors"><Icons.Edit /> Edit</button>
                 </div>
-                <Card variant="outlined" className="p-5">
+                <Card variant="outlined" className="p-5 shadow-sm">
                     <DNAStat label="Driver Club Speed" value={`${user.swingDNA.driverSpeed}`} sub="mph" bar={(user.swingDNA.driverSpeed / 130) * 100} />
                     <DNAStat label="7-Iron Carry" value={`${user.swingDNA.ironCarry7}`} sub="yds" bar={(user.swingDNA.ironCarry7 / 200) * 100} />
                     <DNAStat label="Tempo" value={user.swingDNA.tempo} />
@@ -149,7 +185,7 @@ export const ProfileView: React.FC = () => {
             </section>
 
             {/* Performance Stats */}
-            <section className="px-1">
+            <section className="px-4">
                 <Text variant="h3" className="mb-3">Season Stats</Text>
                 <div className="grid grid-cols-3 gap-3">
                     <StatBox label="Scoring Avg" value={`${user.stats.avgScore}`} trend="↓ 1.2" />
@@ -157,7 +193,7 @@ export const ProfileView: React.FC = () => {
                     <StatBox label="GIR %" value={`${user.stats.greensInRegulation}%`} />
                     <StatBox label="Putts/Rnd" value={`${user.stats.puttsPerRound}`} trend="↓ 0.5" />
                     <StatBox label="Rounds" value={`${user.stats.roundsPlayed}`} />
-                    <div className="bg-orange-50 p-3 rounded-2xl border border-orange-100 flex flex-col items-center justify-center cursor-pointer">
+                    <div className="bg-orange-50 p-3 rounded-2xl border border-orange-100 flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors">
                         <span className="text-orange-500 font-bold text-xs">View All</span>
                         <div className="text-orange-500 mt-1"><Icons.TrendingUp /></div>
                     </div>
@@ -165,7 +201,7 @@ export const ProfileView: React.FC = () => {
             </section>
 
             {/* In The Bag */}
-            <section className="px-1">
+            <section className="px-4">
                 <div className="flex justify-between items-center mb-3">
                     <Text variant="h3">In The Bag</Text>
                     <button className="text-gray-400 hover:text-gray-600"><Icons.Settings /></button>
@@ -176,7 +212,7 @@ export const ProfileView: React.FC = () => {
                         if (!clubs || clubs.length === 0) return null;
                         
                         return (
-                            <div key={category} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                            <div key={category} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                                 <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex justify-between items-center">
                                     <Text variant="caption" className="font-bold text-[10px] uppercase tracking-widest">{category}S</Text>
                                     <span className="text-[10px] text-gray-400 font-bold">{clubs.length} Clubs</span>
@@ -200,6 +236,26 @@ export const ProfileView: React.FC = () => {
                     })}
                 </div>
             </section>
+
+            <Modal isOpen={isEditingDNA} onClose={() => setIsEditingDNA(false)} title="Update Swing DNA" footer={
+                <div className="flex gap-2">
+                    <Button fullWidth variant="ghost" onClick={() => setIsEditingDNA(false)}>Cancel</Button>
+                    <Button fullWidth onClick={handleSaveDNA}>Save DNA</Button>
+                </div>
+            }>
+                <div className="space-y-4">
+                    <Input label="Driver Speed (mph)" type="number" value={dnaValues.driverSpeed} onChange={e => setDnaValues({...dnaValues, driverSpeed: Number(e.target.value)})} />
+                    <Input label="7-Iron Carry (yds)" type="number" value={dnaValues.ironCarry7} onChange={e => setDnaValues({...dnaValues, ironCarry7: Number(e.target.value)})} />
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">Tempo</label>
+                        <div className="flex gap-2">
+                            {['FAST', 'MODERATE', 'SMOOTH'].map(t => (
+                                <button key={t} onClick={() => setDnaValues({...dnaValues, tempo: t as any})} className={`flex-1 py-2 text-xs font-bold rounded-lg border ${dnaValues.tempo === t ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200'}`}>{t}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

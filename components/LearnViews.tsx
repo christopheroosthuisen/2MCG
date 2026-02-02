@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Course, CourseCategoryType, CourseLesson } from '../types';
 import { COLORS, MOCK_LEARNING_PATHS } from '../constants';
-import { Text, Card, Badge, ProgressBar, Button, Tabs } from './UIComponents';
+import { Text, Card, Badge, ProgressBar, Button, Tabs, ScreenHeader } from './UIComponents';
 import { db } from '../services/dataService';
 
 const Icons = {
@@ -69,32 +70,31 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
     const quantCourses = courses.filter(c => c.category === 'QUANT_ANALYSIS');
 
     return (
-        <div className="space-y-8 pb-32 animate-in fade-in duration-500">
+        <div className="space-y-8 pb-32 animate-in fade-in duration-500 bg-[#F5F5F7]">
             {/* Header */}
-            <div className="px-1 pt-6">
-                <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Education</Text>
-                <Text variant="h1" className="mb-2">The Conservatory</Text>
-                <Text variant="body" color="gray">Master the art and science of the game through structured movements.</Text>
-            </div>
+            <ScreenHeader 
+                title="The Conservatory" 
+                subtitle="Education" 
+                rightAction={<div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden"><img src={db.getUser().avatarUrl} className="w-full h-full object-cover" /></div>}
+            />
 
             {/* Paths of Mastery */}
-            <section>
-                 <Text variant="h3" className="mb-4 px-1">Paths of Mastery</Text>
-                 <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar px-1">
+            <section className="px-4">
+                 <Text variant="h3" className="mb-4">Paths of Mastery</Text>
+                 <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar -mx-4 px-4">
                     {MOCK_LEARNING_PATHS.map(path => (
-                        <div key={path.id} className="min-w-[280px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-lg shadow-gray-200/50 flex flex-col group cursor-pointer">
-                            <div className="h-32 relative overflow-hidden">
+                        <div key={path.id} className="min-w-[280px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-lg shadow-gray-200/50 flex flex-col group cursor-pointer transition-transform hover:-translate-y-1">
+                            <div className="h-36 relative overflow-hidden">
                                 <img src={path.thumbnailUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                <div className="absolute bottom-3 left-3 text-white">
-                                    <Text variant="h4" className="leading-none text-white">{path.title}</Text>
-                                    <Text variant="caption" className="text-gray-300 text-[10px] uppercase font-bold mt-1">{path.totalCourses} Courses</Text>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent"></div>
+                                <div className="absolute bottom-4 left-4 right-4 text-white">
+                                    <Text variant="h4" className="leading-none text-white mb-1 shadow-sm">{path.title}</Text>
+                                    <Text variant="caption" className="text-gray-300 text-[10px] uppercase font-bold">{path.totalCourses} Courses</Text>
                                 </div>
                             </div>
                             <div className="p-4 flex-1 flex flex-col justify-between">
-                                <Text className="text-sm text-gray-500 line-clamp-2 mb-3">{path.description}</Text>
+                                <Text className="text-sm text-gray-500 line-clamp-2 mb-4 leading-relaxed">{path.description}</Text>
                                 <Button size="sm" variant="outline" fullWidth onClick={() => {
-                                    // In real app, navigate to path detail. Here we just open the first course of the path
                                     const firstCourse = courses.find(c => c.id === path.courseIds[0]);
                                     if(firstCourse) onSelectCourse(firstCourse);
                                 }}>Start Path</Button>
@@ -105,10 +105,10 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
             </section>
 
              {/* Quant Lab Section */}
-             <section className="bg-gray-900 text-white p-6 -mx-6 mb-8">
+             <section className="bg-gray-900 text-white py-8 my-4">
                 <div className="px-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-blue-400">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-blue-400 backdrop-blur-md">
                             <Icons.Activity />
                         </div>
                         <div>
@@ -118,13 +118,14 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                     </div>
                     <div className="grid grid-cols-1 gap-4">
                         {quantCourses.map(course => (
-                            <div key={course.id} onClick={() => onSelectCourse(course)} className="flex gap-4 bg-white/5 p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-colors border border-white/10">
-                                <div className="w-16 h-16 rounded-lg bg-gray-800 overflow-hidden flex-shrink-0">
+                            <div key={course.id} onClick={() => onSelectCourse(course)} className="flex gap-4 bg-white/5 p-3 rounded-2xl hover:bg-white/10 cursor-pointer transition-colors border border-white/5 items-center">
+                                <div className="w-20 h-20 rounded-xl bg-gray-800 overflow-hidden flex-shrink-0 relative">
                                     <img src={course.thumbnailUrl} className="w-full h-full object-cover opacity-80" />
                                 </div>
                                 <div>
                                     <Text variant="body" color="white" className="font-bold text-sm leading-tight mb-1">{course.title}</Text>
                                     <Text variant="caption" className="text-gray-400 text-xs">{course.instructor}</Text>
+                                    {course.progress > 0 && <div className="mt-2 w-24"><ProgressBar progress={course.progress} className="h-1 bg-gray-700" color={COLORS.primary} /></div>}
                                 </div>
                             </div>
                         ))}
@@ -133,8 +134,8 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
             </section>
 
             {/* Course Directory */}
-            <section>
-                <div className="flex justify-between items-end mb-4 px-1">
+            <section className="px-4">
+                <div className="flex justify-between items-end mb-4">
                     <Text variant="h3">Course Directory</Text>
                 </div>
                 
@@ -144,9 +145,9 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                          <button 
                             key={cat} 
                             onClick={() => setCategoryFilter(cat as CourseCategoryType | 'ALL')}
-                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
+                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-all ${
                                 categoryFilter === cat 
-                                    ? 'bg-gray-900 text-white border-gray-900' 
+                                    ? 'bg-gray-900 text-white border-gray-900 shadow-md' 
                                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                             }`}
                         >
@@ -155,13 +156,13 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                     {filteredCourses.map((course) => (
-                        <div key={course.id} onClick={() => onSelectCourse(course)} className="flex gap-4 group cursor-pointer border-b border-gray-100 pb-6 last:border-0">
-                            <div className="w-24 h-32 rounded-lg bg-gray-200 overflow-hidden relative shadow-sm flex-shrink-0">
+                        <div key={course.id} onClick={() => onSelectCourse(course)} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 cursor-pointer hover:shadow-md transition-shadow group">
+                            <div className="w-24 h-32 rounded-xl bg-gray-200 overflow-hidden relative shadow-inner flex-shrink-0">
                                 <img src={course.thumbnailUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 {course.progress === 100 && (
-                                    <div className="absolute inset-0 bg-green-900/60 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-green-900/60 flex items-center justify-center backdrop-blur-sm">
                                         <div className="bg-white text-green-700 rounded-full p-1"><Icons.Check /></div>
                                     </div>
                                 )}
@@ -170,18 +171,18 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                                 <div>
                                     <div className="flex justify-between items-start mb-1">
                                         <Text variant="caption" className="text-orange-600 font-bold uppercase tracking-wider text-[10px]">{course.tagline}</Text>
-                                        {course.handicapImpact > 0 && <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 font-medium">-{course.handicapImpact} HCP</span>}
+                                        {course.handicapImpact > 0 && <Badge variant="neutral">-{course.handicapImpact}</Badge>}
                                     </div>
                                     <Text variant="h4" className="leading-tight mb-1">{course.title}</Text>
-                                    <Text variant="caption" className="line-clamp-2 text-xs leading-relaxed">{course.description}</Text>
+                                    <Text variant="caption" className="line-clamp-2 text-xs leading-relaxed text-gray-500">{course.description}</Text>
                                 </div>
-                                <div className="flex items-center gap-3 mt-2">
-                                    <div className="flex items-center gap-1 text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded">
+                                <div className="flex items-center gap-3 mt-3">
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded-md">
                                         <Icons.Clock /> {course.totalDuration}m
                                     </div>
                                     {course.progress > 0 && (
-                                        <div className="flex-1 max-w-[80px]">
-                                            <ProgressBar progress={course.progress} className="h-1" />
+                                        <div className="flex-1 max-w-[100px]">
+                                            <ProgressBar progress={course.progress} className="h-1.5" />
                                         </div>
                                     )}
                                 </div>
@@ -198,79 +199,76 @@ const CourseDetail: React.FC<{ course: Course; onBack: () => void; onSelectLesso
     return (
         <div className="bg-white min-h-screen pb-32 animate-in slide-in-from-right duration-300">
             {/* Hero */}
-            <div className="relative h-72 bg-gray-900">
-                <img src={course.thumbnailUrl} className="w-full h-full object-cover opacity-40" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+            <div className="relative h-96 bg-gray-900">
+                <img src={course.thumbnailUrl} className="w-full h-full object-cover opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/60"></div>
                 
                 {/* Nav */}
-                <button onClick={onBack} className="absolute top-6 left-6 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-20 border border-white/10">
+                <button onClick={onBack} className="absolute top-6 left-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20 border border-white/20">
                     <Icons.ChevronLeft />
                 </button>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
-                    <Text variant="caption" className="text-orange-400 font-bold tracking-widest uppercase mb-2">{course.tagline}</Text>
-                    <Text variant="h1" color="white" className="mb-2">{course.title}</Text>
-                    <Text color="gray" className="text-gray-300 line-clamp-2 text-sm max-w-md">{course.description}</Text>
-                    
-                    <div className="flex items-center gap-4 mt-6">
-                         <div className="flex-1">
-                             <div className="flex justify-between text-xs font-bold text-gray-300 mb-2">
-                                <span>Progress</span>
-                                <span>{course.progress}%</span>
-                            </div>
-                            <ProgressBar progress={course.progress} color={COLORS.primary} className="bg-white/20 h-1" />
-                         </div>
-                         <Button size="sm" variant="primary" className="px-6">Resume</Button>
+                    <div className="container mx-auto">
+                        <Badge variant="warning" className="mb-3 bg-orange-500 text-white border-none">{course.tagline}</Badge>
+                        <Text variant="h1" className="mb-2 text-4xl text-gray-900">{course.title}</Text>
+                        <Text className="text-gray-600 line-clamp-2 text-sm max-w-lg mb-6">{course.description}</Text>
+                        
+                        <div className="flex items-center gap-6">
+                             <div className="flex-1 max-w-xs">
+                                 <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
+                                    <span>Course Progress</span>
+                                    <span>{course.progress}%</span>
+                                </div>
+                                <ProgressBar progress={course.progress} color={COLORS.primary} className="bg-gray-200 h-1.5" />
+                             </div>
+                             <Button size="lg" variant="primary" className="px-8 shadow-xl">Resume</Button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="p-6">
-                {course.modules.length === 0 && (
-                    <div className="text-center py-12">
-                        <Text color="gray">Movement content coming soon.</Text>
-                    </div>
-                )}
-                
-                <div className="space-y-8">
+            <div className="p-6 container mx-auto">
+                <div className="space-y-10">
                     {course.modules.map((module) => (
                         <div key={module.id}>
-                            <div className="flex items-center gap-3 mb-4">
+                            <div className="flex items-center gap-4 mb-6">
                                 <div className="h-px bg-gray-200 flex-1"></div>
-                                <Text variant="h4" className="text-gray-400 font-normal uppercase text-xs tracking-widest">{module.title}</Text>
+                                <Text variant="h4" className="text-gray-400 font-bold uppercase text-xs tracking-[0.2em]">{module.title}</Text>
                                 <div className="h-px bg-gray-200 flex-1"></div>
                             </div>
                             
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {module.lessons.map((lesson) => (
                                     <div 
                                         key={lesson.id} 
                                         onClick={() => onSelectLesson(lesson)}
-                                        className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                                        className={`flex items-center gap-5 p-5 rounded-2xl border transition-all group ${
                                             lesson.locked 
                                                 ? 'bg-gray-50 border-transparent opacity-60 cursor-not-allowed' 
-                                                : 'bg-white border-gray-100 hover:border-orange-200 cursor-pointer shadow-sm hover:shadow-md'
+                                                : 'bg-white border-gray-100 hover:border-orange-200 cursor-pointer shadow-sm hover:shadow-lg hover:-translate-y-0.5'
                                         }`}
                                     >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm transition-colors ${
                                             lesson.completed ? 'bg-green-100 text-green-600' : 
-                                            lesson.locked ? 'bg-gray-200 text-gray-400' : 'bg-orange-50 text-orange-500'
+                                            lesson.locked ? 'bg-gray-200 text-gray-400' : 'bg-orange-50 text-orange-500 group-hover:bg-orange-500 group-hover:text-white'
                                         }`}>
                                             {lesson.completed ? <Icons.Check /> : lesson.locked ? <Icons.Lock /> : <Icons.Play />}
                                         </div>
                                         <div className="flex-1">
-                                            <Text variant="body" className="font-bold text-sm mb-0.5">{lesson.title}</Text>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>{lesson.durationMinutes} min</span>
+                                            <Text variant="body" className="font-bold text-base mb-1 group-hover:text-orange-600 transition-colors">{lesson.title}</Text>
+                                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                                                <span className="flex items-center gap-1"><Icons.Clock /> {lesson.durationMinutes} min</span>
                                                 {lesson.targetMetrics && (
                                                     <>
-                                                        <span>•</span>
-                                                        <span className="text-orange-600 font-medium">Data Focus</span>
+                                                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                                        <span className="text-orange-600 font-bold">Data Focus</span>
                                                     </>
                                                 )}
                                             </div>
                                         </div>
+                                        {!lesson.locked && <div className="text-gray-300 group-hover:text-orange-500 transition-colors">→</div>}
                                     </div>
                                 ))}
                             </div>
@@ -298,7 +296,7 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
                     <Icons.ChevronLeft />
                 </button>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
+                    <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform hover:bg-orange-500 hover:border-orange-500">
                         <div className="ml-1"><Icons.Play /></div>
                     </div>
                 </div>
@@ -308,14 +306,14 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
             </div>
 
             {/* Lesson Content */}
-            <div className="flex-1 bg-white text-gray-900 rounded-t-3xl -mt-4 relative z-10 flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white text-gray-900 rounded-t-3xl -mt-6 relative z-10 flex flex-col overflow-hidden shadow-2xl">
                 <div className="p-6 pb-2">
                     <div className="flex justify-between items-start mb-2">
                         <Text variant="caption" className="text-orange-600 font-bold uppercase tracking-wider">{course.title}</Text>
                         {lesson.completed && <Badge variant="success">Completed</Badge>}
                     </div>
-                    <Text variant="h3" className="mb-2 leading-tight">{lesson.title}</Text>
-                    <Text variant="body" className="text-gray-500 text-sm">{lesson.description}</Text>
+                    <Text variant="h2" className="mb-2 leading-tight">{lesson.title}</Text>
+                    <Text variant="body" className="text-gray-500 text-sm max-w-xl">{lesson.description}</Text>
                 </div>
 
                 {/* Tabs */}
@@ -329,16 +327,16 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
 
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
                     {activeTab === 'STUDIO' && (
-                        <div className="space-y-6">
+                        <div className="space-y-8 max-w-2xl mx-auto">
                             {/* Target Metrics */}
                             {lesson.targetMetrics && lesson.targetMetrics.length > 0 && (
                                 <div>
                                     <Text variant="h4" className="text-xs font-bold uppercase text-gray-400 mb-3 tracking-widest">Target Metrics</Text>
-                                    <div className="flex gap-3 overflow-x-auto hide-scrollbar">
+                                    <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
                                         {lesson.targetMetrics.map((metric, i) => (
-                                            <div key={i} className="bg-white border border-gray-100 p-3 rounded-xl min-w-[100px] shadow-sm">
+                                            <div key={i} className="bg-white border border-gray-100 p-4 rounded-2xl min-w-[120px] shadow-sm">
                                                 <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">{metric.label}</div>
-                                                <div className="text-xl font-black text-gray-900">{metric.value}</div>
+                                                <div className="text-2xl font-black text-gray-900">{metric.value}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -348,11 +346,11 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
                             {/* Key Takeaways */}
                             <div>
                                 <Text variant="h4" className="text-xs font-bold uppercase text-gray-400 mb-3 tracking-widest">Key Takeaways</Text>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {lesson.keyTakeaways.map((point, i) => (
-                                        <div key={i} className="flex gap-3 items-start p-3 bg-white rounded-lg border border-gray-100">
-                                            <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center font-bold text-xs mt-0.5">{i+1}</div>
-                                            <Text className="text-sm leading-relaxed">{point}</Text>
+                                        <div key={i} className="flex gap-4 items-start p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                            <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs mt-0.5 flex-shrink-0">{i+1}</div>
+                                            <Text className="text-sm leading-relaxed text-gray-700">{point}</Text>
                                         </div>
                                     ))}
                                 </div>
@@ -364,21 +362,21 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
                                     <Text variant="h4" className="text-xs font-bold uppercase text-gray-400 mb-3 tracking-widest">Resources</Text>
                                     <div className="space-y-2">
                                         {lesson.resources.map((res) => (
-                                            <div key={res.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 cursor-pointer hover:border-orange-200">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-gray-400"><Icons.FileText /></div>
-                                                    <Text className="text-sm font-medium">{res.title}</Text>
+                                            <div key={res.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 cursor-pointer hover:border-orange-200 hover:shadow-md transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-gray-400 bg-gray-50 p-2 rounded-lg"><Icons.FileText /></div>
+                                                    <Text className="text-sm font-bold text-gray-900">{res.title}</Text>
                                                 </div>
-                                                <div className="text-orange-500 text-xs font-bold uppercase">Open</div>
+                                                <div className="text-orange-500 text-xs font-bold uppercase tracking-wider">Open</div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <div className="pt-4 pb-20">
+                            <div className="pt-8 pb-20">
                                 {!lesson.completed && (
-                                    <Button fullWidth variant="primary" className="shadow-orange-200 shadow-lg" onClick={handleComplete}>
+                                    <Button fullWidth variant="primary" size="lg" className="shadow-orange-200 shadow-xl" onClick={handleComplete}>
                                         Mark as Complete
                                     </Button>
                                 )}
@@ -391,12 +389,12 @@ const LessonPlayer: React.FC<{ course: Course; lesson: CourseLesson; onBack: () 
                         </div>
                     )}
                     {activeTab === 'NOTES' && (
-                        <div className="text-center py-12 text-gray-400">
+                        <div className="text-center py-20 text-gray-400">
                             <Text>Your personal notes for this lesson will appear here.</Text>
                         </div>
                     )}
                     {activeTab === 'COMMUNITY' && (
-                         <div className="text-center py-12 text-gray-400">
+                         <div className="text-center py-20 text-gray-400">
                             <Text>Join the discussion with other members.</Text>
                         </div>
                     )}

@@ -18,6 +18,7 @@ import { StatisticsHub } from './components/StatisticsView';
 import { RoundReplayHub } from './components/RoundReplayView';
 import { Onboarding } from './components/Onboarding';
 import { NotificationsView } from './components/NotificationsView';
+import { SubscriptionView } from './components/SubscriptionView'; 
 import { askAICaddie } from './services/geminiService';
 import { db } from './services/dataService';
 import { MOCK_NOTIFICATIONS } from './constants';
@@ -31,11 +32,9 @@ const Icons = {
     Message: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>,
     Send: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
     Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-    Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
-    Flag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>,
-    Users: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-    Bell: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    Bell: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
+    Coin: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>,
+    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 };
 
 // Helper for relative time
@@ -88,7 +87,6 @@ const App: React.FC = () => {
 
     const completeOnboarding = () => {
         setShowOnboarding(false);
-        // Force refresh might be needed in a real app or context update
     };
 
     // Chat State
@@ -133,19 +131,20 @@ const App: React.FC = () => {
         if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'WARMUP') return <div className="min-h-screen bg-white"><WarmupView onBack={() => setSubScreen(null)} /></div>; 
+        if (subScreen.type === 'SUBSCRIPTION') return <div className="min-h-screen bg-white"><SubscriptionView onBack={() => setSubScreen(null)} /></div>;
     }
 
     return (
-        <div className="min-h-screen bg-[#F5F5F7] text-[#4B4B4B] font-sans selection:bg-orange-100">
-            <main className="max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto px-6 hide-scrollbar pb-24">
+        <div className="min-h-screen bg-[#F5F5F7] text-[#111827] font-sans selection:bg-orange-100">
+            <main className="max-w-md mx-auto min-h-screen bg-[#F5F5F7] shadow-2xl relative overflow-hidden flex flex-col">
+                <div className="flex-1 overflow-y-auto px-4 hide-scrollbar pb-32">
                     {currentTab === 'HOME' && (
                         <div className="space-y-8 pt-6 pb-8 screen-enter">
                             {/* Header */}
-                            <header className="flex justify-between items-center px-1">
+                            <header className="flex justify-between items-center px-2">
                                 <div>
                                     <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-0.5">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
-                                    <Text variant="h2" className="text-gray-900 leading-tight">{getGreeting(user.name.split(' ')[0])}</Text>
+                                    <Text variant="h2" className="text-gray-900 leading-tight tracking-tight">{getGreeting(user.name.split(' ')[0])}</Text>
                                     
                                     {/* Streak Widget */}
                                     <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full mt-2 inline-flex border border-orange-100 animate-in fade-in zoom-in duration-300">
@@ -153,31 +152,38 @@ const App: React.FC = () => {
                                         <span className="font-bold text-orange-600 text-xs">{user.stats.streak} Day Streak</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div 
+                                        className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                                        onClick={() => setSubScreen({ type: 'SUBSCRIPTION' })}
+                                    >
+                                        <span className="text-yellow-500 text-sm"><Icons.Coin /></span>
+                                        <span className="text-gray-900 font-bold text-xs">{user.credits}</span>
+                                    </div>
                                     <button 
-                                        className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                                        className="relative p-2.5 text-gray-500 hover:text-gray-900 bg-white rounded-full shadow-sm border border-gray-100 transition-colors"
                                         onClick={() => setShowNotifications(true)}
                                     >
                                         <Icons.Bell />
                                         {unreadCount > 0 && (
-                                            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                                         )}
                                     </button>
                                     <div className="relative group cursor-pointer transition-transform hover:scale-105" onClick={() => navigateTo('PROFILE')}>
-                                        <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md">
+                                        <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-md">
                                             <img src={user.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                                         </div>
                                     </div>
                                 </div>
                             </header>
 
-                            {/* Quick Actions Grid (Focused on Improvement/Analysis) */}
+                            {/* Quick Actions Grid */}
                             <div>
-                                <Text variant="h3" className="mb-3 px-1">Improvement Hub</Text>
+                                <Text variant="h4" className="mb-3 px-2 text-sm font-bold uppercase tracking-wider text-gray-400">Improvement Hub</Text>
                                 <div className="grid grid-cols-3 gap-3">
                                     <QuickAction 
                                         icon="📥" 
-                                        label="Import Data" 
+                                        label="Import" 
                                         onClick={() => setIsUploadWizardOpen(true)} 
                                     />
                                     <QuickAction 
@@ -196,7 +202,7 @@ const App: React.FC = () => {
                             {/* AI Insight / Report Widget */}
                             <div className="relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
                                 <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-gray-800 rounded-3xl transform rotate-1 opacity-50 blur-sm group-hover:rotate-2 transition-transform"></div>
-                                <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden">
+                                <Card variant="filled" className="bg-gradient-to-br from-gray-900 to-gray-800 text-white relative overflow-hidden shadow-xl">
                                     <div className="absolute top-0 right-0 p-6 opacity-10"><Icons.Activity /></div>
                                     <div className="flex items-start gap-4 relative z-10">
                                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400 border border-white/10 backdrop-blur-md flex-shrink-0 animate-pulse">
@@ -216,29 +222,32 @@ const App: React.FC = () => {
 
                             {/* Key Stats Row (Enhanced) */}
                             <div className="grid grid-cols-2 gap-4">
-                                <Card className="col-span-2 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-5 border-none shadow-xl">
+                                <Card className="col-span-2 bg-white p-5 border border-gray-100 shadow-sm rounded-3xl">
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <Text variant="metric-label" className="text-gray-400">Handicap Index</Text>
-                                            <Text variant="metric" className="text-5xl text-white tracking-tighter mt-1">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
-                                            <div className="flex items-center gap-1 text-green-400 mt-2 text-xs font-bold bg-green-400/10 px-2 py-1 rounded inline-block">
+                                            <div className="flex items-baseline gap-2">
+                                                <Text variant="metric" className="text-5xl text-gray-900 tracking-tighter mt-1">{user.swingDNA.handicap > 0 ? '+' : ''}{Math.abs(user.swingDNA.handicap)}</Text>
+                                                <span className="text-sm font-bold text-gray-400">HCP</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-green-600 mt-2 text-xs font-bold bg-green-50 px-2 py-1 rounded-full inline-block border border-green-100">
                                                 <span>↓</span> 0.3 this month
                                             </div>
                                         </div>
                                         {/* Mini visual trend */}
-                                        <div className="flex items-end gap-1 h-12 opacity-50">
+                                        <div className="flex items-end gap-1.5 h-16 opacity-80">
                                             {[40, 55, 35, 70, 50, 80, 65].map((h, i) => (
-                                                <div key={i} className="w-2 bg-white rounded-t-sm" style={{ height: `${h}%` }} />
+                                                <div key={i} className="w-3 bg-gray-900 rounded-t-sm" style={{ height: `${h}%`, opacity: (i+3)/10 }} />
                                             ))}
                                         </div>
                                     </div>
                                 </Card>
                                 
-                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100">
+                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border border-gray-100 bg-white">
                                     <div className="absolute right-[-20px] top-[-20px] bg-orange-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
                                     <div>
                                         <Text variant="caption" className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">Active Goal</Text>
-                                        <Text variant="h3" className="text-lg leading-tight mt-1 line-clamp-2 min-h-[3rem]">{db.getGoals()[0]?.title || 'Set Goal'}</Text>
+                                        <Text variant="h3" className="text-lg leading-tight mt-1 line-clamp-2 min-h-[3rem] text-gray-900">{db.getGoals()[0]?.title || 'Set Goal'}</Text>
                                     </div>
                                     <div>
                                         <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
@@ -249,14 +258,14 @@ const App: React.FC = () => {
                                     </div>
                                 </Card>
 
-                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border-gray-100 cursor-pointer" onClick={() => setIsRecording(true)}>
+                                <Card className="p-4 flex flex-col justify-between h-36 relative overflow-hidden group hover:shadow-md transition-all border border-gray-100 cursor-pointer bg-white" onClick={() => setIsRecording(true)}>
                                     <div className="absolute right-[-20px] top-[-20px] bg-blue-50 w-24 h-24 rounded-full opacity-50 transition-transform group-hover:scale-110"></div>
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+                                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-2">
                                         <Icons.Camera />
                                     </div>
                                     <div>
-                                        <Text variant="h4" className="text-base font-bold">Record Swing</Text>
-                                        <Text variant="caption" className="text-xs">AI Analysis</Text>
+                                        <Text variant="h4" className="text-base font-bold text-gray-900">Record Swing</Text>
+                                        <Text variant="caption" className="text-xs text-gray-500">AI Analysis</Text>
                                     </div>
                                 </Card>
                             </div>
@@ -268,31 +277,31 @@ const App: React.FC = () => {
                     {/* Updated Analyze Tab Structure */}
                     {currentTab === 'ANALYZE' && (
                         <div className="screen-enter flex flex-col h-full">
-                            <div className="px-6 pt-6 pb-2 bg-white sticky top-0 z-10 border-b border-gray-100">
+                            <div className="px-4 pt-6 pb-2 bg-[#F5F5F7]/95 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200/50">
                                 <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Data & Video</Text>
                                 <Text variant="h1" className="mb-4">Analyze</Text>
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={() => setAnalyzeTab('VIDEO')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'VIDEO' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'VIDEO' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                                     >
                                         Video
                                     </button>
                                     <button 
                                         onClick={() => setAnalyzeTab('SG')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'SG' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'SG' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                                     >
                                         Gained
                                     </button>
                                     <button 
                                         onClick={() => setAnalyzeTab('STATS')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'STATS' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'STATS' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                                     >
                                         Stats
                                     </button>
                                     <button 
                                         onClick={() => setAnalyzeTab('REPLAY')}
-                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'REPLAY' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}
+                                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${analyzeTab === 'REPLAY' ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                                     >
                                         Replay
                                     </button>
@@ -312,22 +321,23 @@ const App: React.FC = () => {
                     {currentTab === 'SOCIAL' && <div className="screen-enter"><SocialHub /></div>}
                 </div>
 
-                <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
-                    <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
-                    {/* Play Button Removed */}
-                    <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
-                    <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
-                    <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
-                    <NavButton active={currentTab === 'SOCIAL'} onClick={() => navigateTo('SOCIAL')} icon={<Icons.Users />} label="Social" />
-                </nav>
-
-                {/* AI Caddie Floating Button */}
-                <button 
-                    onClick={() => setIsChatOpen(true)}
-                    className="absolute bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-orange-600 transition-colors z-40 hover:scale-105 active:scale-95"
-                >
-                    <Icons.Message />
-                </button>
+                {/* Floating Navigation Bar */}
+                <div className="absolute bottom-6 left-4 right-4 z-40 safe-area-bottom">
+                    <nav className="bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl px-2 py-3 flex justify-between items-center border border-white/10">
+                        <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
+                        <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
+                        <div className="relative -top-6">
+                            <button 
+                                onClick={() => setIsChatOpen(true)}
+                                className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full shadow-lg shadow-orange-500/40 flex items-center justify-center text-white hover:scale-105 transition-transform border-4 border-[#F5F5F7]"
+                            >
+                                <Icons.Message />
+                            </button>
+                        </div>
+                        <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
+                        <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />
+                    </nav>
+                </div>
 
                 {/* AI Caddie Chat Overlay */}
                 {isChatOpen && (
@@ -337,28 +347,28 @@ const App: React.FC = () => {
                                 <Text variant="h4">AI Caddie</Text>
                                 <Text variant="caption" className="text-xs">Powered by Gemini 3 Pro • Search • Maps</Text>
                             </div>
-                            <button onClick={() => setIsChatOpen(false)} className="p-2 text-gray-500"><Icons.Close /></button>
+                            <button onClick={() => setIsChatOpen(false)} className="p-2 text-gray-500 bg-white rounded-full shadow-sm border border-gray-200 hover:bg-gray-50"><Icons.Close /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                             {messages.length === 0 && (
                                 <div className="text-center text-gray-400 mt-20">
-                                    <p>Ask me about course rules, local weather, or strategy.</p>
-                                    <div className="flex flex-wrap justify-center gap-2 mt-4">
-                                        <button onClick={() => setInput("What's the weather at Pebble Beach?")} className="text-xs bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 transition-colors">Weather @ Pebble</button>
-                                        <button onClick={() => setInput("Explain the new drop rule")} className="text-xs bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 transition-colors">Drop Rules</button>
+                                    <p className="mb-4">Ask me about course rules, local weather, or strategy.</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        <button onClick={() => setInput("What's the weather at Pebble Beach?")} className="text-xs bg-white border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors shadow-sm">Weather @ Pebble</button>
+                                        <button onClick={() => setInput("Explain the new drop rule")} className="text-xs bg-white border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors shadow-sm">Drop Rules</button>
                                     </div>
                                 </div>
                             )}
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}>
                                         {m.text}
                                     </div>
                                 </div>
                             ))}
                             {loadingChat && <div className="text-xs text-gray-400 ml-4 animate-pulse">Thinking...</div>}
                         </div>
-                        <div className="p-4 border-t border-gray-100 safe-area-bottom">
+                        <div className="p-4 border-t border-gray-100 safe-area-bottom bg-white">
                             <div className="flex gap-2">
                                 <Input 
                                     value={input} 
@@ -379,12 +389,12 @@ const App: React.FC = () => {
 };
 
 const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; }> = ({ active, onClick, icon, label }) => (
-    <button onClick={onClick} className={`relative flex flex-col items-center gap-1 transition-all w-12 ${active ? 'text-[#FF8200] -translate-y-1' : 'text-gray-400 hover:text-gray-600'}`}>
-        {active && (
-            <div className="absolute -top-2 w-1 h-1 bg-orange-500 rounded-full tab-fade" />
-        )}
-        <div className={`w-5 h-5 ${active ? 'stroke-[2.5px]' : ''}`}>{icon}</div>
-        <span className={`text-[9px] font-bold ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
+    <button onClick={onClick} className={`relative flex flex-col items-center gap-1 transition-all w-16 group`}>
+        <div className={`w-6 h-6 transition-colors duration-200 ${active ? 'text-orange-500 stroke-[2.5px]' : 'text-gray-400 group-hover:text-gray-200'}`}>
+            {icon}
+        </div>
+        <span className={`text-[9px] font-bold transition-colors duration-200 ${active ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>{label}</span>
+        {active && <div className="absolute -bottom-2 w-1 h-1 bg-orange-500 rounded-full" />}
     </button>
 );
 

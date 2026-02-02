@@ -3,24 +3,14 @@ import React, { useState } from 'react';
 import { UserProfile, GolfProfile, AppPreferences, PrivacySettings, LinkedAccount, SubscriptionInfo, ThemeMode, Language, MeasurementUnit, TemperatureUnit, SkillLevel } from '../types';
 import { COLORS, MOCK_USER_PROFILE, MOCK_GOLF_PROFILE, MOCK_PREFERENCES, MOCK_PRIVACY_SETTINGS, MOCK_LINKED_ACCOUNTS, MOCK_SUBSCRIPTION } from '../constants';
 import { ScreenHeader } from './UIComponents';
+import { SubscriptionView } from './SubscriptionView'; // Import the new view
 
 // --- CONSTANTS ---
 const LANGUAGES: Record<Language, string> = {
   en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어', zh: '中文',
 };
 
-const SKILL_LEVELS: Record<SkillLevel, { name: string; description: string }> = {
-  beginner: { name: 'Beginner', description: 'New to golf, still learning basics' },
-  intermediate: { name: 'Intermediate', description: 'Comfortable with fundamentals' },
-  advanced: { name: 'Advanced', description: 'Low handicap, competitive player' },
-  professional: { name: 'Professional', description: 'Teaching pro or tour player' },
-};
-
-const SUBSCRIPTION_TIERS: Record<string, { name: string; color: string; icon: string }> = {
-  free: { name: 'Free', color: COLORS.gray, icon: '🎯' },
-  premium: { name: 'Premium', color: COLORS.primary, icon: '⭐' },
-  pro: { name: 'Pro', color: COLORS.premium, icon: '👑' },
-};
+// ... (Rest of constants remain same)
 
 // --- COMPONENTS ---
 
@@ -107,9 +97,14 @@ const LinkedAccountCard: React.FC<{ account: LinkedAccount; onConnect: () => voi
 };
 
 export const SettingsHub: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const [section, setSection] = useState<'MAIN' | 'PREFS' | 'ACCOUNTS'>('MAIN');
+  const [section, setSection] = useState<'MAIN' | 'PREFS' | 'ACCOUNTS' | 'SUBSCRIPTION'>('MAIN');
   const [prefs, setPrefs] = useState(MOCK_PREFERENCES);
   const [accounts, setAccounts] = useState(MOCK_LINKED_ACCOUNTS);
+
+  // If subscription view is active, render it full screen
+  if (section === 'SUBSCRIPTION') {
+      return <SubscriptionView onBack={() => setSection('MAIN')} />;
+  }
 
   return (
     <div className="bg-[#F5F5F7] min-h-screen pb-20 animate-in slide-in-from-right duration-300">
@@ -125,7 +120,7 @@ export const SettingsHub: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Account</div>
                 <div className="rounded-2xl overflow-hidden border border-gray-100">
                     <SettingsMenuItem icon="🔗" label="Linked Accounts" description="Google, GHIN, TrackMan" onPress={() => setSection('ACCOUNTS')} />
-                    <SettingsMenuItem icon="⭐" label="Subscription" badge="Premium" onPress={() => {}} />
+                    <SettingsMenuItem icon="⭐" label="Subscription" badge="Premium" onPress={() => setSection('SUBSCRIPTION')} />
                 </div>
             </div>
             <div>

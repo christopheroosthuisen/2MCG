@@ -1,6 +1,6 @@
 
-import { MOCK_USER_PROFILE, MOCK_RECENT_SWINGS, MOCK_SESSIONS, MOCK_GOALS, MOCK_COURSES, MOCK_DRILLS, MOCK_BAG_SLOTS, MOCK_ROUNDS, MOCK_WORKOUTS, MOCK_HANDICAP_HISTORY, MOCK_COACH } from '../constants';
-import { UserProfile, SwingAnalysis, TrackManSession, PracticeGoal, BagShotSlot, Course, Drill, ActionLog, Club, OnCourseRound, Workout, HandicapRecord, CoachProfile } from '../types';
+import { MOCK_USER_PROFILE, MOCK_RECENT_SWINGS, MOCK_SESSIONS, MOCK_GOALS, MOCK_COURSES, MOCK_DRILLS, MOCK_BAG_SLOTS, MOCK_ROUNDS, MOCK_WORKOUTS, MOCK_HANDICAP_HISTORY, MOCK_COACH, MOCK_TRANSACTIONS } from '../constants';
+import { UserProfile, SwingAnalysis, TrackManSession, PracticeGoal, BagShotSlot, Course, Drill, ActionLog, Club, OnCourseRound, Workout, HandicapRecord, CoachProfile, CreditTransaction, SubscriptionTier } from '../types';
 
 class DataService {
     private user: UserProfile;
@@ -15,6 +15,7 @@ class DataService {
     private workouts: Workout[];
     private handicapHistory: HandicapRecord[];
     private coach: CoachProfile;
+    private creditTransactions: CreditTransaction[];
 
     private readonly STORAGE_KEY = 'mcg_app_data_v2';
 
@@ -37,6 +38,11 @@ class DataService {
                 this.workouts = parsed.workouts || [...MOCK_WORKOUTS];
                 this.handicapHistory = parsed.handicapHistory?.map((h: any) => ({ ...h, date: new Date(h.date) })) || [...MOCK_HANDICAP_HISTORY];
                 this.coach = parsed.coach || MOCK_COACH;
+                this.creditTransactions = parsed.creditTransactions?.map((t: any) => ({ ...t, date: new Date(t.date) })) || [...MOCK_TRANSACTIONS];
+                
+                // Ensure credits exist on legacy data
+                if (typeof this.user.credits === 'undefined') this.user.credits = 100;
+
             } catch (e) {
                 console.error("Failed to parse saved data, resetting to defaults", e);
                 this.resetToDefaults();
@@ -59,6 +65,7 @@ class DataService {
         this.handicapHistory = [...MOCK_HANDICAP_HISTORY];
         this.coach = MOCK_COACH;
         this.actionLog = [];
+        this.creditTransactions = [...MOCK_TRANSACTIONS];
         this.save();
     }
 
@@ -75,7 +82,8 @@ class DataService {
             rounds: this.rounds,
             workouts: this.workouts,
             handicapHistory: this.handicapHistory,
-            coach: this.coach
+            coach: this.coach,
+            creditTransactions: this.creditTransactions
         };
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
@@ -97,6 +105,7 @@ class DataService {
     getWorkouts() { return this.workouts; }
     getHandicapHistory() { return this.handicapHistory; }
     getCoach() { return this.coach; }
+    getCreditTransactions() { return this.creditTransactions.sort((a, b) => b.date.getTime() - a.date.getTime()); }
 
     // --- ACTIONS ---
 
@@ -209,6 +218,46 @@ class DataService {
             this.logAction('WORKOUT_COMPLETE', { title: this.workouts[index].title });
             this.save();
         }
+    }
+
+    // --- MONETIZATION ACTIONS ---
+
+    purchaseCredits(amount: number, cost: number, packageName: string) {
+        this.user.credits += amount;
+        const tx: CreditTransaction = {
+            id: crypto.randomUUID(),
+            date: new Date(),
+            type: 'PURCHASE',
+            amount: amount,
+            description: `Purchased ${packageName}`
+        };
+        this.creditTransactions.unshift(tx);
+        this.logAction('PURCHASE_CREDITS', { amount, cost });
+        this.save();
+    }
+
+    spendCredits(amount: number, reason: string): boolean {
+        if (this.user.credits < amount) return false;
+        
+        this.user.credits -= amount;
+        const tx: CreditTransaction = {
+            id: crypto.randomUUID(),
+            date: new Date(),
+            type: 'USAGE',
+            amount: -amount,
+            description: reason
+        };
+        this.creditTransactions.unshift(tx);
+        this.logAction('SPEND_CREDITS', { amount, reason });
+        this.save();
+        return true;
+    }
+
+    updateSubscription(tier: SubscriptionTier) {
+        const oldTier = this.user.memberStatus;
+        this.user.memberStatus = tier === 'free' ? 'FREE' : tier === 'premium' ? 'PRO' : 'TOUR'; // Mapping internal keys
+        this.logAction('UPDATE_SUBSCRIPTION', { from: oldTier, to: this.user.memberStatus });
+        this.save();
     }
 
     private logAction(type: ActionLog['type'], details: any) {

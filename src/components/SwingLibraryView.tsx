@@ -32,16 +32,14 @@ const mapAnalysisToVideo = (analysis: SwingAnalysis): SwingVideo => {
             timestamp: kf.timestamp,
             angles: []
         })),
-        annotations: analysis.annotations ? analysis.annotations
-            .filter(a => ['LINE', 'CIRCLE', 'ANGLE', 'ARROW', 'TEXT'].includes(a.type)) // Filter compatible types
-            .map((a, i) => ({
-                 id: a.id,
-                 type: a.type as Annotation['type'],
-                 frameNumber: 0,
-                 points: a.points,
-                 color: a.color,
-                 text: ''
-            })) : []
+        annotations: analysis.annotations ? analysis.annotations.map(a => ({
+             id: a.id,
+             type: a.type as Annotation['type'],
+             frameNumber: 0,
+             points: a.points,
+             color: a.color,
+             text: ''
+        })) : []
     };
 };
 

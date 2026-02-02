@@ -89,6 +89,7 @@ export interface UserProfile {
     name: string;
     email: string;
     memberStatus: 'FREE' | 'PRO' | 'TOUR';
+    credits: number; // Monetization: Virtual currency balance
     avatarUrl: string;
     homeCourse: string;
     stats: {
@@ -97,7 +98,7 @@ export interface UserProfile {
         fairwaysHit: number; 
         greensInRegulation: number; 
         puttsPerRound: number;
-        streak: number; // New: Daily streak
+        streak: number; 
     };
     bag: Club[];
     swingDNA: SwingDNA;
@@ -401,9 +402,38 @@ export interface CoachProfile {
 // System Logs
 export interface ActionLog {
     id: string;
-    type: 'ADD_SWING' | 'ADD_SESSION' | 'UPDATE_GOAL' | 'COMPLETE_LESSON' | 'MASTER_SHOT' | 'AI_CHAT' | 'ROUND_COMPLETE' | 'WORKOUT_COMPLETE';
+    type: 'ADD_SWING' | 'ADD_SESSION' | 'UPDATE_GOAL' | 'COMPLETE_LESSON' | 'MASTER_SHOT' | 'AI_CHAT' | 'ROUND_COMPLETE' | 'WORKOUT_COMPLETE' | 'PURCHASE_CREDITS' | 'SPEND_CREDITS' | 'UPDATE_SUBSCRIPTION';
     timestamp: Date;
     details: any;
+}
+
+// --- MONETIZATION TYPES ---
+
+export interface CreditTransaction {
+    id: string;
+    date: Date;
+    type: 'PURCHASE' | 'USAGE' | 'REFUND' | 'BONUS';
+    amount: number;
+    description: string;
+}
+
+export interface CreditPackage {
+    id: string;
+    credits: number;
+    price: number;
+    discount?: string;
+    popular?: boolean;
+}
+
+export interface SubscriptionPlan {
+    id: string;
+    name: string;
+    price: number;
+    interval: 'monthly' | 'yearly';
+    features: string[];
+    isPopular?: boolean;
+    tier: 'FREE' | 'PRO' | 'TOUR';
+    color: string;
 }
 
 // --- NEW SOCIAL & STATS TYPES ---
