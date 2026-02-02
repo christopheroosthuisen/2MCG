@@ -24,7 +24,7 @@ const Icons = {
     Target: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
 };
 
-export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void }> = ({ onOpenTempoTool, onOpenBagOfShots }) => {
+export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onAskCoach?: (msg: string) => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onAskCoach }) => {
     const [activeTab, setActiveTab] = useState('DASHBOARD');
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [showPuttingLab, setShowPuttingLab] = useState(false);
@@ -51,8 +51,8 @@ export const PracticeSystem: React.FC<{ onOpenTempoTool: () => void; onOpenBagOf
             </div>
 
             <div className="px-4">
-                {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} onOpenPuttingLab={() => setShowPuttingLab(true)} />}
-                {activeTab === 'GOALS' && <GoalsView />}
+                {activeTab === 'DASHBOARD' && <PracticeDashboard onOpenTempoTool={onOpenTempoTool} onOpenBagOfShots={onOpenBagOfShots} onOpenPuttingLab={() => setShowPuttingLab(true)} onAskCoach={onAskCoach} />}
+                {activeTab === 'GOALS' && <GoalsView onAskCoach={onAskCoach} />}
                 {activeTab === 'HISTORY' && <HistoryView />}
                 {activeTab === 'SWINGS' && <SwingLibraryView />}
             </div>
@@ -164,7 +164,7 @@ const PracticeTimer: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
 };
 
-const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onOpenPuttingLab: () => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onOpenPuttingLab }) => {
+const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShots: () => void; onOpenPuttingLab: () => void; onAskCoach?: (msg: string) => void }> = ({ onOpenTempoTool, onOpenBagOfShots, onOpenPuttingLab, onAskCoach }) => {
     const [drillFilter, setDrillFilter] = useState<'ALL' | 'PUTTING' | 'CHIPPING' | 'BUNKER'>('ALL');
     const [editGoalOpen, setEditGoalOpen] = useState(false);
     const goals = db.getGoals();
@@ -335,16 +335,28 @@ const PracticeDashboard: React.FC<{ onOpenTempoTool: () => void; onOpenBagOfShot
     );
 };
 
-const GoalsView: React.FC = () => {
+const GoalsView: React.FC<{ onAskCoach?: (msg: string) => void }> = ({ onAskCoach }) => {
     const goals = db.getGoals();
     return (
         <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3">
                 <div className="text-2xl">🤖</div>
-                <div>
+                <div className="flex-1">
                     <Text variant="h4" className="text-blue-900 text-sm font-bold">AI Coach Recommendation</Text>
                     <Text variant="caption" className="text-blue-800 text-xs mt-1">Based on your last 3 driver sessions, your spin rate is too high (2900rpm). Set a goal to lower it to 2400rpm to gain ~12 yards.</Text>
-                    <Button size="sm" variant="outline" className="mt-2 border-blue-300 text-blue-700 hover:bg-blue-100">Set Spin Goal</Button>
+                    <div className="flex gap-2 mt-2">
+                        <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">Set Spin Goal</Button>
+                        {onAskCoach && (
+                            <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-blue-600 hover:bg-blue-100" 
+                                onClick={() => onAskCoach("Why is my driver spin rate 2900rpm too high, and how do I lower it?")}
+                            >
+                                Ask Coach Why
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
             {goals.map((goal) => (

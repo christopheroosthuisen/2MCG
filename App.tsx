@@ -99,6 +99,11 @@ const App: React.FC = () => {
     const [isLiveActive, setIsLiveActive] = useState(false);
     const [liveSession, setLiveSession] = useState<any>(null);
 
+    const openChatWithContext = (message: string) => {
+        setInput(message);
+        setIsChatOpen(true);
+    };
+
     const handleSendChat = async () => {
         if (!input.trim()) return;
         const newMsg = { role: 'user' as const, text: input };
@@ -144,12 +149,12 @@ const App: React.FC = () => {
     }
     
     if (showNotifications) {
-        return <NotificationsView onBack={() => setShowNotifications(false)} />;
+        return <NotificationsView onBack={() => setShowNotifications(false)} onAskCoach={openChatWithContext} />;
     }
 
     // Render Sub-screens over the main layout
     if (subScreen) {
-        if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} />;
+        if (subScreen.type === 'ANALYSIS_RESULT') return <AnalysisResult analysisId={subScreen.id} onBack={() => setSubScreen(null)} onAskCoach={openChatWithContext} />;
         if (subScreen.type === 'TOOL') return <TempoTool onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
@@ -236,7 +241,14 @@ const App: React.FC = () => {
                                             <Text className="text-base font-medium leading-snug mb-3">Your driver spin rate is averaging 2900rpm (+400 vs target). Try teeing the ball slightly higher.</Text>
                                             <div className="flex gap-2">
                                                 <Button size="sm" variant="outline" className="text-xs h-8 px-3 border-gray-600 text-gray-300 hover:bg-white/5 hover:text-white hover:border-gray-400">View Data</Button>
-                                                <Button size="sm" variant="primary" className="text-xs h-8 px-3 bg-orange-600 hover:bg-orange-500 border-none shadow-orange-900/20">Fix It</Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="primary" 
+                                                    className="text-xs h-8 px-3 bg-orange-600 hover:bg-orange-500 border-none shadow-orange-900/20"
+                                                    onClick={() => openChatWithContext("How can I fix my high driver spin rate? I'm averaging 2900rpm.")}
+                                                >
+                                                    Fix It
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -294,7 +306,7 @@ const App: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    {currentTab === 'PRACTICE' && <div className="screen-enter"><PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} /></div>}
+                    {currentTab === 'PRACTICE' && <div className="screen-enter"><PracticeSystem onOpenTempoTool={() => setSubScreen({ type: 'TOOL' })} onOpenBagOfShots={() => setSubScreen({ type: 'BAG' })} onAskCoach={openChatWithContext} /></div>}
                     {currentTab === 'LEARN' && <div className="screen-enter"><LearnSystem /></div>}
                     
                     {/* Updated Analyze Tab Structure */}
@@ -426,7 +438,7 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {isUploadWizardOpen && <DataUploadWizard onClose={() => setIsUploadWizardOpen(false)} onComplete={() => {}} />}
+                {isUploadWizardOpen && <DataUploadWizard onClose={() => setIsUploadWizardOpen(false)} onComplete={() => {}} onAskCoach={openChatWithContext} />}
             </main>
         </div>
     );

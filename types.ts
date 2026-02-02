@@ -38,7 +38,7 @@ export interface SwingMetrics {
 }
 
 // Data Import Types
-export type ImportSource = 'ARCCOS' | '18BIRDIES' | 'GOLFSHOT' | 'THEGRINT' | 'HOLE19' | 'GOLFPAD' | 'SWINGU' | 'GOLFLOGIX' | 'GOLFPLAYED' | 'SHOTSCOPE' | 'MANUAL' | 'SHOT_DOCTOR';
+export type ImportSource = 'ARCCOS' | '18BIRDIES' | 'GOLFSHOT' | 'THEGRINT' | 'HOLE19' | 'GOLFPAD' | 'SWINGU' | 'GOLFLOGIX' | 'GOLFPLAYED' | 'SHOTSCOPE' | 'MANUAL' | 'SHOT_DOCTOR' | 'TRACKMAN';
 
 export interface StrokesGainedStats {
     offTee: number;
@@ -568,6 +568,8 @@ export interface AppPreferences {
   videoQuality: 'low' | 'medium' | 'high';
   offlineMode: boolean;
   dataUsage: 'low' | 'standard' | 'unlimited';
+  coachVoice?: 'friendly' | 'technical' | 'strict';
+  analysisDepth?: 'quick' | 'balanced' | 'deep';
 }
 
 export interface PrivacySettings {
@@ -867,3 +869,131 @@ export interface CaddieTip {
 
 // App State Types
 export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PROFILE' | 'SOCIAL';
+
+// --- ADVANCED SWING ANALYSIS TYPES ---
+
+export type SwingPositionId = 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9' | 'P10';
+
+export interface SwingPositionDefinition {
+    id: SwingPositionId;
+    name: string;
+    fullName: string;
+    description: string;
+    checkpoints: string[];
+    idealAngles: { name: string; min: number; max: number; ideal: number }[];
+}
+
+export type SkeletonJoint = 'HEAD' | 'NECK' | 'LEFT_SHOULDER' | 'RIGHT_SHOULDER' | 'LEFT_ELBOW' | 'RIGHT_ELBOW' | 'LEFT_WRIST' | 'RIGHT_WRIST' | 'LEFT_HIP' | 'RIGHT_HIP' | 'LEFT_KNEE' | 'RIGHT_KNEE' | 'LEFT_ANKLE' | 'RIGHT_ANKLE' | 'SPINE_MID' | 'SPINE_BASE' | 'LEFT_HAND' | 'RIGHT_HAND' | 'CLUB_GRIP' | 'CLUB_SHAFT_MID' | 'CLUB_HEAD';
+
+export interface SkeletonJointData {
+    joint: SkeletonJoint;
+    x: number;
+    y: number;
+    confidence: number;
+    visible: boolean;
+}
+
+export interface SkeletonConnection {
+    from: SkeletonJoint;
+    to: SkeletonJoint;
+    color?: string;
+}
+
+export interface MeasuredAngle {
+    name: string;
+    value: number;
+    idealMin: number;
+    idealMax: number;
+    idealValue: number;
+    status: 'EXCELLENT' | 'GOOD' | 'NEEDS_WORK' | 'CRITICAL';
+    jointA: SkeletonJoint;
+    jointB: SkeletonJoint;
+    jointC: SkeletonJoint;
+}
+
+export interface PositionCoachingFeedback {
+    id: string;
+    category: string;
+    severity: 'INFO' | 'TIP' | 'WARNING' | 'CRITICAL';
+    title: string;
+    description: string;
+    correction: string;
+    proReference: string;
+    drillIds?: string[];
+}
+
+export interface DetectedPosition {
+    positionId: SwingPositionId;
+    timestamp: number;
+    frameNumber?: number;
+    confidence: number;
+    screenshotDataUrl?: string; // Base64
+    skeletonData: SkeletonJointData[];
+    angles: MeasuredAngle[];
+    coaching: PositionCoachingFeedback[];
+    overallGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+}
+
+export interface VideoTrimResult {
+    originalDuration: number;
+    trimmedStartTime: number;
+    trimmedEndTime: number;
+    trimmedDuration: number;
+    swingDetected: boolean;
+    confidence: number;
+}
+
+export interface CoachingRecommendation {
+    id: string;
+    priority: 'HIGH' | 'MEDIUM' | 'LOW';
+    category: string;
+    title: string;
+    description: string;
+    positionRefs: string[];
+    drillIds: string[];
+    estimatedImpact: string;
+}
+
+export interface RecommendedDrill {
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    difficulty: string;
+    duration: string;
+    steps: string[];
+    targetPositions: string[];
+    expectedImprovement: string;
+}
+
+export interface FullSwingAnalysis {
+    id: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+    date: Date;
+    clubUsed: string;
+    shotType: string;
+    cameraAngle: string;
+    executionLevel: number; // 1-5
+    trimResult: VideoTrimResult;
+    positions: DetectedPosition[];
+    overallScore: number;
+    overallGrade: string;
+    strengths: string[];
+    weaknesses: string[];
+    recommendations: CoachingRecommendation[];
+    drills: RecommendedDrill[];
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export type AnalysisPipelineStage = 'UPLOAD' | 'TRIM' | 'DETECT_POSITIONS' | 'ANALYZE_POSITIONS' | 'GENERATE_REPORT' | 'COMPLETE' | 'ERROR';
+
+export interface AnalysisPipelineState {
+    stage: AnalysisPipelineStage;
+    progress: number; // 0-100
+    message: string;
+    error?: string;
+    analysisId?: string;
+}

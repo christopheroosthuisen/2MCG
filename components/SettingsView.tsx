@@ -1,18 +1,9 @@
 
 import React, { useState } from 'react';
-import { UserProfile, GolfProfile, AppPreferences, PrivacySettings, LinkedAccount, SubscriptionInfo, ThemeMode, Language, MeasurementUnit, TemperatureUnit, SkillLevel } from '../types';
-import { COLORS, MOCK_USER_PROFILE, MOCK_GOLF_PROFILE, MOCK_PREFERENCES, MOCK_PRIVACY_SETTINGS, MOCK_LINKED_ACCOUNTS, MOCK_SUBSCRIPTION } from '../constants';
+import { AppPreferences, LinkedAccount, ThemeMode, Language, MeasurementUnit } from '../types';
+import { COLORS, MOCK_PREFERENCES, MOCK_LINKED_ACCOUNTS } from '../constants';
 import { ScreenHeader } from './UIComponents';
-import { SubscriptionView } from './SubscriptionView'; // Import the new view
-
-// --- CONSTANTS ---
-const LANGUAGES: Record<Language, string> = {
-  en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어', zh: '中文',
-};
-
-// ... (Rest of constants remain same)
-
-// --- COMPONENTS ---
+import { SubscriptionView } from './SubscriptionView';
 
 const SettingsToggle: React.FC<{ label: string; description?: string; value: boolean; onChange: (value: boolean) => void; icon?: string; }> = ({ label, description, value, onChange, icon }) => (
     <div className="flex justify-between items-center p-3 bg-white rounded-lg">
@@ -68,11 +59,24 @@ const SettingsMenuItem: React.FC<{ icon: string; label: string; description?: st
 const AppPreferencesEditor: React.FC<{ preferences: AppPreferences; onUpdate: (updates: Partial<AppPreferences>) => void; }> = ({ preferences, onUpdate }) => (
     <div className="space-y-3">
       <SettingsSelector label="Theme" icon="🎨" value={preferences.theme} options={[{ value: 'light', label: '☀️ Light' }, { value: 'dark', label: '🌙 Dark' }, { value: 'system', label: '⚙️ System' }]} onChange={(v) => onUpdate({ theme: v as ThemeMode })} />
-      <div className="p-3 bg-white rounded-lg">
-        <div className="flex items-center gap-3 mb-2"><span className="text-xl">🌐</span><span className="font-medium text-sm">Language</span></div>
-        <select value={preferences.language} onChange={(e) => onUpdate({ language: e.target.value as Language })} className="w-full p-2 rounded-lg border border-gray-200 text-sm bg-white"><option value="en">English</option><option value="es">Español</option></select>
-      </div>
       <SettingsSelector label="Distance Unit" icon="📏" value={preferences.distanceUnit} options={[{ value: 'yards', label: 'Yards' }, { value: 'meters', label: 'Meters' }]} onChange={(v) => onUpdate({ distanceUnit: v as MeasurementUnit })} />
+      
+      <div className="px-1 pt-2 pb-1 text-xs font-bold text-gray-500 uppercase tracking-wider">AI Coach</div>
+      <SettingsSelector 
+        label="Voice Style" 
+        icon="🗣️" 
+        value={(preferences as any).coachVoice || 'friendly'} 
+        options={[{ value: 'friendly', label: 'Friendly' }, { value: 'technical', label: 'Technical' }, { value: 'strict', label: 'Strict' }]} 
+        onChange={(v) => onUpdate({ coachVoice: v } as any)} 
+      />
+      <SettingsSelector 
+        label="Analysis Depth" 
+        icon="🧠" 
+        value={(preferences as any).analysisDepth || 'balanced'} 
+        options={[{ value: 'quick', label: 'Quick Tips' }, { value: 'balanced', label: 'Balanced' }, { value: 'deep', label: 'Deep Dive' }]} 
+        onChange={(v) => onUpdate({ analysisDepth: v } as any)} 
+      />
+
       <SettingsToggle label="Haptic Feedback" icon="📳" value={preferences.hapticFeedback} onChange={(v) => onUpdate({ hapticFeedback: v })} />
       <SettingsToggle label="Sound Effects" icon="🔊" value={preferences.soundEffects} onChange={(v) => onUpdate({ soundEffects: v })} />
     </div>
@@ -101,7 +105,6 @@ export const SettingsHub: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [prefs, setPrefs] = useState(MOCK_PREFERENCES);
   const [accounts, setAccounts] = useState(MOCK_LINKED_ACCOUNTS);
 
-  // If subscription view is active, render it full screen
   if (section === 'SUBSCRIPTION') {
       return <SubscriptionView onBack={() => setSection('MAIN')} />;
   }

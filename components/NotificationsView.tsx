@@ -37,9 +37,20 @@ const formatTimeAgo = (timestamp: string): string => {
   return date.toLocaleDateString();
 };
 
-const NotificationCard: React.FC<{ notification: Notification; onRead: (id: string) => void }> = ({ notification, onRead }) => {
+const NotificationCard: React.FC<{ 
+    notification: Notification; 
+    onRead: (id: string) => void;
+    onAskCoach?: (msg: string) => void;
+}> = ({ notification, onRead, onAskCoach }) => {
   const config = NOTIFICATION_CONFIG[notification.type];
   const isUnread = notification.status === 'unread';
+
+  const handleAction = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onAskCoach && (notification.type === 'coaching' || notification.type === 'lesson' || notification.type === 'practice')) {
+          onAskCoach(`Can you explain more about this: "${notification.message}"?`);
+      }
+  };
 
   return (
     <div
@@ -56,9 +67,12 @@ const NotificationCard: React.FC<{ notification: Notification; onRead: (id: stri
             <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{formatTimeAgo(notification.timestamp)}</span>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed mb-2">{notification.message}</p>
-          {notification.actionUrl && (
-            <button className="text-xs font-bold text-white bg-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
-              {notification.actionLabel || 'View'}
+          {(notification.actionUrl || ['coaching', 'lesson', 'practice'].includes(notification.type)) && (
+            <button 
+                onClick={handleAction}
+                className="text-xs font-bold text-white bg-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Ask Coach
             </button>
           )}
         </div>
@@ -67,7 +81,7 @@ const NotificationCard: React.FC<{ notification: Notification; onRead: (id: stri
   );
 };
 
-export const NotificationsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+export const NotificationsView: React.FC<{ onBack: () => void; onAskCoach?: (msg: string) => void }> = ({ onBack, onAskCoach }) => {
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
 
@@ -104,7 +118,7 @@ export const NotificationsView: React.FC<{ onBack: () => void }> = ({ onBack }) 
 
       <div className="px-4 space-y-3 pb-8">
         {filteredNotifications.length > 0 ? (
-            filteredNotifications.map(n => <NotificationCard key={n.id} notification={n} onRead={handleMarkRead} />)
+            filteredNotifications.map(n => <NotificationCard key={n.id} notification={n} onRead={handleMarkRead} onAskCoach={onAskCoach} />)
         ) : (
             <div className="text-center py-12 text-gray-400">
                 <div className="text-4xl mb-2">📭</div>
