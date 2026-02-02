@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Text, Button, Card, Badge } from './UIComponents';
 import { ImportSource, StrokesGainedStats, RecommendationEngine, SwingMetrics, SwingAnalysis } from '../types';
@@ -11,7 +12,8 @@ const Icons = {
     Scan: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>,
     ArrowRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>,
     Eye: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
-    ChevronRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    ChevronRight: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
+    Edit: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
 };
 
 // --- GOLF PHYSICS ENGINE ---
@@ -108,7 +110,7 @@ class GolfPhysicsEngine {
     }
 }
 
-type WizardStep = 'SELECT_SOURCE' | 'INPUT_DATA' | 'PROCESSING' | 'RECOMMENDATION';
+type WizardStep = 'SELECT_SOURCE' | 'INPUT_DATA' | 'PROCESSING' | 'RECOMMENDATION' | 'MANUAL_SCORE';
 
 interface DataUploadWizardProps {
     onClose: () => void;
@@ -138,6 +140,9 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
         clubSpeed: 105, ballSpeed: 155, path: 0, faceAngle: 0, spinRate: 2500, launchAngle: 12, attackAngle: 0, smashFactor: 1.48
     });
 
+    // Manual Score Share State
+    const [manualScore, setManualScore] = useState({ score: 72, course: 'My Home Course' });
+
     const [recommendation, setRecommendation] = useState<RecommendationEngine | null>(null);
     const [shotAnalysis, setShotAnalysis] = useState<ShotAnalysisResult | null>(null);
 
@@ -156,8 +161,11 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                     issues: engine.issues,
                     praise: engine.praise
                 });
+            } else if (source === 'MANUAL') {
+                // Just log the round, no detailed SG
+                // Skip directly to complete for simple manual entry
             } else {
-                // Existing SG Logic
+                // Existing SG Logic for App Imports
                 const areas = [
                     { id: 'DRIVING', val: sgStats.offTee },
                     { id: 'IRON_PLAY', val: sgStats.approach },
@@ -176,19 +184,19 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 if (worstArea.id === 'PUTTING') {
                     rec.recommendedCourseId = 'c7'; 
                     rec.recommendedDrills = ['3', 'd-putt-2'];
-                    rec.reasoning = `You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes per round on the greens.`;
+                    rec.reasoning = `Based on imported data, you are losing ${Math.abs(worstArea.val).toFixed(2)} strokes per round on the greens.`;
                 } else if (worstArea.id === 'SHORT_GAME') {
                      rec.recommendedCourseId = 'c5'; 
                      rec.recommendedDrills = ['4', 'd-chip-2', 'd-bunker-1'];
-                     rec.reasoning = `Your short game is costing you ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
+                     rec.reasoning = `Your short game data indicates a loss of ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
                 } else if (worstArea.id === 'IRON_PLAY') {
                      rec.recommendedCourseId = 'c3';
                      rec.recommendedDrills = ['1'];
-                     rec.reasoning = `Approach play is the key separator. You are losing ${Math.abs(worstArea.val).toFixed(2)} strokes here.`;
+                     rec.reasoning = `Approach play is the key separator. Data shows you losing ${Math.abs(worstArea.val).toFixed(2)} strokes here.`;
                 } else {
                      rec.recommendedCourseId = 'c1';
                      rec.recommendedDrills = ['1'];
-                     rec.reasoning = `Driving is setting you back ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
+                     rec.reasoning = `Driving stats are setting you back ${Math.abs(worstArea.val).toFixed(2)} strokes.`;
                 }
                 setRecommendation(rec);
             }
@@ -214,6 +222,19 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 score: Math.max(0, 100 - (shotAnalysis.issues.length * 10))
             };
             db.addSwing(newSwing);
+        } else if (source === 'MANUAL') {
+             db.addRound({
+                id: crypto.randomUUID(),
+                courseName: manualScore.course,
+                date: new Date(),
+                score: manualScore.score,
+                par: 72,
+                holesPlayed: 18,
+                fairwaysHit: 0,
+                greensInRegulation: 0,
+                putts: 0,
+                isCompleted: true
+            });
         } else {
             onComplete(sgStats);
         }
@@ -225,20 +246,25 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
         label: string, 
         icon?: React.ReactNode,
         isApp?: boolean,
-        description?: string
-    }> = ({ id, label, icon, isApp, description }) => (
+        description?: string,
+        color?: string
+    }> = ({ id, label, icon, isApp, description, color }) => (
         <button
             onClick={() => {
                 setSource(id);
-                setStep('INPUT_DATA');
+                if (id === 'MANUAL') {
+                    setStep('MANUAL_SCORE');
+                } else {
+                    setStep('INPUT_DATA');
+                }
             }}
-            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all shadow-sm group h-32 w-full relative overflow-hidden"
+            className="flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all shadow-sm group h-28 w-full relative overflow-hidden"
         >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 text-2xl shadow-sm ${isApp ? 'bg-black text-white' : (id === 'SHOT_DOCTOR' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600')}`}>
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 text-xl shadow-sm ${isApp ? 'bg-black text-white' : (id === 'SHOT_DOCTOR' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600')}`} style={color ? { backgroundColor: color, color: 'white' } : {}}>
                 {icon || label[0]}
             </div>
-            <span className="text-sm font-bold text-gray-700 group-hover:text-orange-700">{label}</span>
-            {description && <span className="text-[10px] text-gray-400 mt-1">{description}</span>}
+            <span className="text-xs font-bold text-gray-700 group-hover:text-orange-700 text-center leading-tight">{label}</span>
+            {description && <span className="text-[9px] text-gray-400 mt-1">{description}</span>}
         </button>
     );
 
@@ -285,7 +311,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                         {[1, 2, 3].map(i => (
                             <div key={i} className={`h-1 rounded-full w-4 ${
                                 (step === 'SELECT_SOURCE' && i === 1) || 
-                                (step === 'INPUT_DATA' && i === 2) || 
+                                ((step === 'INPUT_DATA' || step === 'MANUAL_SCORE') && i === 2) || 
                                 ((step === 'PROCESSING' || step === 'RECOMMENDATION') && i === 3)
                                 ? 'bg-orange-500' 
                                 : 'bg-gray-200'
@@ -302,21 +328,66 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {/* STEP 1: SELECT SOURCE */}
                 {step === 'SELECT_SOURCE' && (
                     <div className="space-y-6 max-w-md mx-auto">
-                        <div className="text-center mb-8">
-                            <Text variant="h2" className="mb-2">Choose Mode</Text>
-                            <Text color="gray">Analyze a single shot using physics or import round stats.</Text>
+                        <div className="text-center mb-4">
+                            <Text variant="h2" className="mb-2">Analysis Source</Text>
+                            <Text color="gray">Analyze a single shot or import round data from your favorite app to get AI recommendations.</Text>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                            <SourceButton id="SHOT_DOCTOR" label="Shot Doctor" description="Analyze 1 Shot" icon={<Icons.Eye />} />
-                            <SourceButton id="MANUAL" label="Manual Entry" description="Strokes Gained" icon={<Icons.Activity />} />
-                            <SourceButton id="TRACKMAN" label="TrackMan" icon={<div className="w-6 h-6 bg-orange-500 rounded-full"/>} />
-                            <SourceButton id="ARCCOS" label="Arccos" icon={<div className="w-6 h-6 bg-black rounded-lg"/>} isApp />
+                        <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-widest">Tools</Text>
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            <SourceButton id="SHOT_DOCTOR" label="Shot Doctor" description="Physics Analysis" icon={<Icons.Eye />} />
+                            <SourceButton id="MANUAL" label="Score Share" description="Log Score Only" icon={<Icons.Edit />} />
+                        </div>
+
+                        <Text variant="caption" className="font-bold text-gray-400 uppercase tracking-widest">Sync App Data (Stats)</Text>
+                        <div className="grid grid-cols-3 gap-3">
+                            <SourceButton id="18BIRDIES" label="18Birdies" color="#00C853" icon="🐦" />
+                            <SourceButton id="ARCCOS" label="Arccos" color="#000000" icon="🅰️" />
+                            <SourceButton id="THEGRINT" label="TheGrint" color="#2196F3" icon="👻" />
+                            <SourceButton id="GOLFSHOT" label="Golfshot" color="#FF5722" icon="🎯" />
+                            <SourceButton id="HOLE19" label="Hole19" color="#2962FF" icon="19" />
+                            <SourceButton id="GOLFPAD" label="Golf Pad" color="#4CAF50" icon="📱" />
+                            <SourceButton id="SWINGU" label="SwingU" color="#607D8B" icon="U" />
+                            <SourceButton id="GOLFLOGIX" label="GolfLogix" color="#8BC34A" icon="🟩" />
+                            <SourceButton id="GOLFPLAYED" label="GolfPlayed" color="#FFC107" icon="🌍" />
+                            <SourceButton id="SHOTSCOPE" label="Shot Scope" color="#3F51B5" icon="⌚" />
                         </div>
                     </div>
                 )}
 
-                {/* STEP 2: INPUT DATA */}
+                {/* STEP 2: MANUAL SCORE */}
+                {step === 'MANUAL_SCORE' && (
+                    <div className="space-y-6 max-w-md mx-auto">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📝</div>
+                            <Text variant="h2">Log Score</Text>
+                            <Text color="gray">Quickly save your round to track handicap trends.</Text>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Course Name</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none font-bold"
+                                    value={manualScore.course}
+                                    onChange={(e) => setManualScore({...manualScore, course: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Total Score</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full p-4 rounded-xl border border-gray-300 focus:border-orange-500 outline-none text-4xl font-black text-center"
+                                    value={manualScore.score}
+                                    onChange={(e) => setManualScore({...manualScore, score: parseInt(e.target.value) || 0})}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 2: INPUT DATA (FOR APPS) */}
                 {step === 'INPUT_DATA' && (
                     <div className="space-y-6 max-w-md mx-auto">
                         {/* Source Header */}
@@ -326,8 +397,8 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                                     {source && source[0]}
                                 </div>
                                 <div>
-                                    <Text variant="h4" className="text-base">{source === 'SHOT_DOCTOR' ? 'Ball Data' : 'SG Data'}</Text>
-                                    <Text variant="caption">Enter values</Text>
+                                    <Text variant="h4" className="text-base">{source === 'SHOT_DOCTOR' ? 'Ball Data' : 'Import SG Data'}</Text>
+                                    <Text variant="caption">Enter values from {source}</Text>
                                 </div>
                             </div>
                             {source === 'SHOT_DOCTOR' && (
@@ -344,19 +415,20 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                             )}
                         </div>
 
-                        {/* Scanner Option */}
-                        <div className="bg-gray-900 text-white rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-colors shadow-lg">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400">
-                                    <Icons.Scan />
+                        {source === 'SHOT_DOCTOR' && (
+                            <div className="bg-gray-900 text-white rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-gray-800 transition-colors shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-orange-400">
+                                        <Icons.Scan />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm">Scan Screenshot</div>
+                                        <div className="text-xs text-gray-400">Auto-fill from photo</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="font-bold text-sm">Scan Screenshot</div>
-                                    <div className="text-xs text-gray-400">Auto-fill from photo</div>
-                                </div>
+                                <Badge variant="neutral" className="bg-white/10 text-white border-none">AI</Badge>
                             </div>
-                            <Badge variant="neutral" className="bg-white/10 text-white border-none">AI</Badge>
-                        </div>
+                        )}
 
                         <div className="h-px bg-gray-200 w-full my-2"></div>
 
@@ -373,6 +445,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                                 </>
                             ) : (
                                 <>
+                                    <Text variant="caption" className="mb-2 text-center text-gray-500">Enter Strokes Gained values from your app summary.</Text>
                                     <StatInput label="SG: Off the Tee" value={sgStats.offTee} onChange={(v) => setSgStats({...sgStats, offTee: v})} />
                                     <StatInput label="SG: Approach" value={sgStats.approach} onChange={(v) => setSgStats({...sgStats, approach: v})} />
                                     <StatInput label="SG: Around Green" value={sgStats.aroundGreen} onChange={(v) => setSgStats({...sgStats, aroundGreen: v})} />
@@ -388,7 +461,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                     <div className="flex flex-col items-center justify-center h-full text-center">
                         <div className="w-20 h-20 border-4 border-gray-100 border-t-orange-500 rounded-full animate-spin mb-6"></div>
                         <Text variant="h2" className="mb-2">Crunching Numbers</Text>
-                        <Text color="gray">{source === 'SHOT_DOCTOR' ? 'Applying D-Plane Physics...' : 'Comparing against Tour averages...'}</Text>
+                        <Text color="gray">{source === 'SHOT_DOCTOR' ? 'Applying D-Plane Physics...' : 'Generating Training Plan...'}</Text>
                     </div>
                 )}
 
@@ -446,7 +519,7 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                         )}
 
                         {/* STROKES GAINED RESULTS */}
-                        {source !== 'SHOT_DOCTOR' && recommendation && (
+                        {source !== 'SHOT_DOCTOR' && source !== 'MANUAL' && recommendation && (
                             <>
                                 <Card variant="filled" className="bg-orange-50 border-orange-200">
                                     <Text variant="caption" className="font-bold text-orange-800 uppercase tracking-widest mb-2">Primary Focus Area</Text>
@@ -489,8 +562,10 @@ export const DataUploadWizard: React.FC<DataUploadWizardProps> = ({ onClose, onC
                 {step === 'SELECT_SOURCE' && (
                     <Button fullWidth variant="ghost" onClick={onClose}>Cancel</Button>
                 )}
-                {step === 'INPUT_DATA' && (
-                    <Button fullWidth onClick={processData} icon={<Icons.ArrowRight />}>Analyze Data</Button>
+                {(step === 'INPUT_DATA' || step === 'MANUAL_SCORE') && (
+                    <Button fullWidth onClick={source === 'MANUAL' ? handleComplete : processData} icon={<Icons.ArrowRight />}>
+                        {source === 'MANUAL' ? 'Log Round' : 'Analyze Data'}
+                    </Button>
                 )}
                 {step === 'RECOMMENDATION' && (
                     <Button 

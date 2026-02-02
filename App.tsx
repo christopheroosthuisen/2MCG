@@ -9,9 +9,7 @@ import { TempoTool } from './components/TempoTool';
 import { DataUploadWizard } from './components/DataUploadWizard';
 import { BagOfShots } from './components/BagOfShots';
 import { ProfileView } from './components/ProfileView';
-import { OnCourseView } from './components/OnCourseView';
 import { FitnessView } from './components/FitnessView';
-import { WeatherView } from './components/WeatherView';
 import { WarmupView } from './components/WarmupView';
 import { SwingLibrary } from './components/SwingLibraryView'; 
 import { SocialHub } from './components/SocialView';
@@ -134,7 +132,6 @@ const App: React.FC = () => {
         if (subScreen.type === 'TOOL') return <TempoTool onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'BAG') return <BagOfShots onBack={() => setSubScreen(null)} />;
         if (subScreen.type === 'FITNESS') return <div className="min-h-screen bg-white"><FitnessView onBack={() => setSubScreen(null)} /></div>; 
-        if (subScreen.type === 'WEATHER') return <div className="min-h-screen bg-white"><WeatherView onBack={() => setSubScreen(null)} /></div>; 
         if (subScreen.type === 'WARMUP') return <div className="min-h-screen bg-white"><WarmupView onBack={() => setSubScreen(null)} /></div>; 
     }
 
@@ -174,24 +171,24 @@ const App: React.FC = () => {
                                 </div>
                             </header>
 
-                            {/* Quick Actions Grid (Updated Routing) */}
+                            {/* Quick Actions Grid (Focused on Improvement/Analysis) */}
                             <div>
-                                <Text variant="h3" className="mb-3 px-1">Quick Actions</Text>
+                                <Text variant="h3" className="mb-3 px-1">Improvement Hub</Text>
                                 <div className="grid grid-cols-3 gap-3">
                                     <QuickAction 
-                                        icon="📏" 
-                                        label="Tempo" 
-                                        onClick={() => setSubScreen({ type: 'TOOL' })} 
+                                        icon="📥" 
+                                        label="Import Data" 
+                                        onClick={() => setIsUploadWizardOpen(true)} 
                                     />
                                     <QuickAction 
-                                        icon="🌦️" 
-                                        label="Weather" 
-                                        onClick={() => setSubScreen({ type: 'WEATHER' })} 
+                                        icon="⛳" 
+                                        label="Practice" 
+                                        onClick={() => navigateTo('PRACTICE')} 
                                     />
                                     <QuickAction 
-                                        icon="🤸" 
-                                        label="Warmup" 
-                                        onClick={() => setSubScreen({ type: 'WARMUP' })} 
+                                        icon="📹" 
+                                        label="Analyze" 
+                                        onClick={() => navigateTo('ANALYZE')} 
                                     />
                                 </div>
                             </div>
@@ -311,14 +308,13 @@ const App: React.FC = () => {
                         </div>
                     )}
                     
-                    {currentTab === 'PLAY' && <div className="screen-enter"><OnCourseView /></div>}
                     {currentTab === 'PROFILE' && <div className="screen-enter"><ProfileView /></div>}
                     {currentTab === 'SOCIAL' && <div className="screen-enter"><SocialHub /></div>}
                 </div>
 
                 <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 pb-8 flex justify-between items-center z-40 safe-area-bottom">
                     <NavButton active={currentTab === 'HOME'} onClick={() => navigateTo('HOME')} icon={<Icons.Home />} label="Home" />
-                    <NavButton active={currentTab === 'PLAY'} onClick={() => navigateTo('PLAY')} icon={<Icons.Flag />} label="Play" />
+                    {/* Play Button Removed */}
                     <NavButton active={currentTab === 'PRACTICE'} onClick={() => navigateTo('PRACTICE')} icon={<Icons.Target />} label="Practice" />
                     <NavButton active={currentTab === 'ANALYZE'} onClick={() => navigateTo('ANALYZE')} icon={<Icons.Camera />} label="Analyze" />
                     <NavButton active={currentTab === 'LEARN'} onClick={() => navigateTo('LEARN')} icon={<Icons.Book />} label="Learn" />

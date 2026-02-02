@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { PracticeGoal, TrackManSession, Drill, SwingAnalysis } from '../types';
 import { COLORS } from '../constants';
 import { Text, Card, Badge, ProgressBar, Button, Input, Tabs } from './UIComponents';
-import { MetricCard } from './AnalysisViews';
 import { db } from '../services/dataService';
 import { PuttingLabView } from './PuttingLabView';
 

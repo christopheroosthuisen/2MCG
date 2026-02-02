@@ -38,7 +38,7 @@ export interface SwingMetrics {
 }
 
 // Data Import Types
-export type ImportSource = 'ARCCOS' | 'TANGENT' | 'TRACKMAN' | 'GCQUAD' | 'MANUAL' | 'SHOT_DOCTOR';
+export type ImportSource = 'ARCCOS' | '18BIRDIES' | 'GOLFSHOT' | 'THEGRINT' | 'HOLE19' | 'GOLFPAD' | 'SWINGU' | 'GOLFLOGIX' | 'GOLFPLAYED' | 'SHOTSCOPE' | 'MANUAL' | 'SHOT_DOCTOR';
 
 export interface StrokesGainedStats {
     offTee: number;
@@ -107,7 +107,7 @@ export interface UserProfile {
 
 // Analysis Types
 
-export type AnalysisStatus = 'IDLE' | 'RECORDING' | 'PROCESSING' | 'ANALYZING' | 'COMPLETE' | 'ERROR';
+export type AnalysisStatus = 'IDLE' | 'SELECT_SOURCE' | 'PREVIEW' | 'RECORDING' | 'PROCESSING' | 'ANALYZING' | 'COMPLETE' | 'ERROR';
 
 export type KeyframeType = 'ADDRESS' | 'TAKEAWAY' | 'TOP' | 'DOWNSWING' | 'IMPACT' | 'FOLLOW_THROUGH' | 'FINISH';
 
@@ -118,7 +118,7 @@ export interface Keyframe {
     thumbnail?: string;
 }
 
-export type ToolType = 'POINTER' | 'LINE' | 'ANGLE' | 'CIRCLE' | 'RECT' | 'FREEHAND' | 'GRID' | 'SKELETON';
+export type ToolType = 'POINTER' | 'LINE' | 'ANGLE' | 'CIRCLE' | 'RECT' | 'FREEHAND' | 'SKELETON';
 export type PlaybackSpeed = 0.1 | 0.25 | 0.5 | 1.0;
 
 export interface SkeletonConfig {
@@ -128,12 +128,18 @@ export interface SkeletonConfig {
     showHead: boolean;
 }
 
+export interface Point {
+    x: number;
+    y: number;
+}
+
 export interface DrawnAnnotation {
     id: string;
     type: ToolType;
-    points: { x: number; y: number }[]; 
+    points: Point[]; 
     color: string;
     strokeWidth: number;
+    frameTimestamp?: number; // Optional: To show only on specific frames
 }
 
 export interface FeedbackMessage {
@@ -830,4 +836,4 @@ export interface CaddieTip {
 }
 
 // App State Types
-export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PLAY' | 'PROFILE' | 'SOCIAL';
+export type Tab = 'HOME' | 'PRACTICE' | 'ANALYZE' | 'LEARN' | 'PROFILE' | 'SOCIAL';
