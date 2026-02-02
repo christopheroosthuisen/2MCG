@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Button, Text, Card, Badge, ProgressBar } from './UIComponents';
 import { COLORS } from '../constants';
 import { AnalysisStatus, FeedbackMessage, Keyframe, PlaybackSpeed, ToolType, SwingAnalysis, SkeletonConfig, DrawnAnnotation, Point } from '../types';
-import { analyzeSwingFrame } from '../services/geminiService';
+import { analyzeSwingFrame, editSwingImage, animateSwingPhoto } from '../services/geminiService';
 import { db } from '../services/dataService';
 
 // --- ICONS ---
@@ -12,7 +12,7 @@ const Icons = {
     Pause: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>,
     SkipBack: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>,
     SkipForward: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>,
-    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+    Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
     Split: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>,
     Tag: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>,
     Maximize: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>,
@@ -27,10 +27,12 @@ const Icons = {
     Trash: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
     Folder: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>,
     Cloud: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>,
-    Scissors: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+    Scissors: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>,
+    Wand: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 2l2.5 5.5L26 10l-5.5 2.5L18 18l-2.5-5.5L10 10l5.5-2.5zM2 10l1.5 3.5L7 15l-3.5 1.5L2 20l-1.5-3.5L-3 15l3.5-1.5z"></path></svg>,
+    Film: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
 };
 
-// --- ANNOTATION LAYER ---
+// ... (AnnotationOverlay matches previous)
 const AnnotationOverlay: React.FC<{
     width: number;
     height: number;
@@ -153,7 +155,7 @@ const AnnotationOverlay: React.FC<{
     );
 };
 
-// --- MEDIA INGEST WIZARD ---
+// ... (MediaCaptureWizard matches previous)
 export const MediaCaptureWizard: React.FC<{
     onComplete: (videoUrl: string, thumbUrl: string) => void;
     onCancel: () => void;
@@ -166,8 +168,6 @@ export const MediaCaptureWizard: React.FC<{
 
     // Mock Camera logic
     const handleCameraStart = () => {
-        // In real app, trigger native camera or webRTC
-        // For web demo, defaulting to file select as camera simulation often fails in sandboxes
         fileInputRef.current?.click();
     };
 
@@ -259,7 +259,7 @@ export const MediaCaptureWizard: React.FC<{
     return null;
 };
 
-// --- PRO VIDEO PLAYER ---
+// ... (ProVideoPlayer, TransportControls match previous)
 export const ProVideoPlayer: React.FC<{
     src: string;
     isPlaying: boolean;
@@ -303,9 +303,8 @@ export const ProVideoPlayer: React.FC<{
                 className="max-h-full max-w-full" 
                 playsInline 
                 loop 
-                muted // Muted for autoplay policy, though handled by play()
+                muted 
                 onLoadedMetadata={() => {
-                    // Force update dimensions once video loads
                     if (containerRef.current) {
                         setDims({ width: containerRef.current.offsetWidth, height: containerRef.current.offsetHeight });
                     }
@@ -341,8 +340,6 @@ export const TransportControls: React.FC<{
     onRateChange: (rate: number) => void;
     onFrameStep: (frames: number) => void;
 }> = ({ isPlaying, onTogglePlay, currentTime, duration, playbackRate, onSeek, onRateChange, onFrameStep }) => {
-    
-    // Format time 0:00.00
     const formatTime = (t: number) => {
         const s = Math.floor(t);
         const ms = Math.floor((t % 1) * 100);
@@ -351,7 +348,6 @@ export const TransportControls: React.FC<{
 
     return (
         <div className="bg-[#111827] border-t border-gray-800 p-2 safe-area-bottom">
-            {/* Scrubber */}
             <div className="relative h-10 mb-2 group cursor-pointer" 
                 onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -359,21 +355,17 @@ export const TransportControls: React.FC<{
                     onSeek(pos * (duration || 1));
                 }}
             >
-                {/* Filmstrip BG Mock */}
                 <div className="absolute inset-0 flex opacity-20 overflow-hidden">
                     {Array.from({length: 20}).map((_, i) => (
                         <div key={i} className="flex-1 border-r border-gray-600 bg-gray-800"></div>
                     ))}
                 </div>
-                {/* Progress */}
                 <div className="absolute top-0 bottom-0 left-0 bg-orange-600/30 border-r-2 border-orange-500" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}></div>
-                {/* Time Display */}
                 <div className="absolute top-1 left-2 text-[10px] font-mono font-bold text-orange-500 bg-black/50 px-1 rounded">
                     {formatTime(currentTime)}
                 </div>
             </div>
 
-            {/* Buttons */}
             <div className="flex justify-between items-center px-2">
                 <div className="flex gap-2">
                     {[0.25, 0.5, 1.0].map(rate => (
@@ -410,7 +402,9 @@ export const AnalysisToolbar: React.FC<{
     activeTool: ToolType | null;
     onSelectTool: (t: ToolType | null) => void;
     onClear: () => void;
-}> = ({ activeTool, onSelectTool, onClear }) => (
+    onMagicEdit: () => void;
+    onAnimate: () => void;
+}> = ({ activeTool, onSelectTool, onClear, onMagicEdit, onAnimate }) => (
     <div className="bg-[#1F2937] border-t border-gray-700 p-2 safe-area-bottom">
         <div className="flex items-center justify-between">
             <div className="flex gap-2 overflow-x-auto hide-scrollbar">
@@ -418,7 +412,6 @@ export const AnalysisToolbar: React.FC<{
                     { id: 'LINE', icon: '📏', label: 'Line' },
                     { id: 'CIRCLE', icon: '⭕', label: 'Circle' },
                     { id: 'FREEHAND', icon: '✏️', label: 'Draw' },
-                    // { id: 'ANGLE', icon: '📐', label: 'Angle' }, // Keep simple for now
                 ].map(tool => (
                     <button 
                         key={tool.id} 
@@ -433,6 +426,21 @@ export const AnalysisToolbar: React.FC<{
                         <span className="text-[9px] font-bold uppercase">{tool.label}</span>
                     </button>
                 ))}
+                {/* AI Tools */}
+                <button 
+                    onClick={onMagicEdit}
+                    className="flex flex-col items-center justify-center min-w-[56px] h-14 rounded-xl transition-all bg-gray-800 text-blue-400 hover:bg-gray-700 hover:text-blue-300"
+                >
+                    <span className="text-lg mb-0.5">✨</span>
+                    <span className="text-[9px] font-bold uppercase">Edit</span>
+                </button>
+                <button 
+                    onClick={onAnimate}
+                    className="flex flex-col items-center justify-center min-w-[56px] h-14 rounded-xl transition-all bg-gray-800 text-purple-400 hover:bg-gray-700 hover:text-purple-300"
+                >
+                    <span className="text-lg mb-0.5">🎬</span>
+                    <span className="text-[9px] font-bold uppercase">Animate</span>
+                </button>
             </div>
             <div className="h-8 w-px bg-gray-700 mx-2"></div>
             <button onClick={onClear} className="flex flex-col items-center justify-center min-w-[50px] h-14 rounded-xl bg-gray-800 text-red-400 hover:bg-gray-700 hover:text-red-300">
@@ -455,6 +463,10 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
     const [playbackRate, setPlaybackRate] = useState(1.0);
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
     const [annotations, setAnnotations] = useState<DrawnAnnotation[]>(swing.annotations || []);
+    
+    // Generative AI State
+    const [isProcessingAI, setIsProcessingAI] = useState(false);
+    const [generatedMediaUrl, setGeneratedMediaUrl] = useState<string | null>(null);
 
     // Sync Time
     useEffect(() => {
@@ -480,14 +492,48 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
     };
 
     const handleFrameStep = (frames: number) => {
-        // Approx 30fps
         const step = 1/30;
         handleSeek(Math.min(Math.max(0, currentTime + (frames * step)), duration));
     };
 
     const handleAddAnnotation = (ann: DrawnAnnotation) => {
         setAnnotations(prev => [...prev, ann]);
-        setActiveTool(null); // Deselect after drawing
+        setActiveTool(null);
+    };
+
+    const captureFrame = () => {
+        if (!videoRef.current) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+        return canvas.toDataURL('image/jpeg');
+    };
+
+    const handleMagicEdit = async () => {
+        const frame = captureFrame();
+        if (!frame) return;
+        
+        const userPrompt = window.prompt("What would you like to edit? (e.g., 'Add a retro filter', 'Remove background')");
+        if (!userPrompt) return;
+
+        setIsProcessingAI(true);
+        const result = await editSwingImage(frame, userPrompt);
+        setIsProcessingAI(false);
+        
+        if (result) setGeneratedMediaUrl(result);
+    };
+
+    const handleAnimate = async () => {
+        const frame = captureFrame();
+        if (!frame) return;
+
+        setIsProcessingAI(true);
+        // Using Veo to animate
+        const result = await animateSwingPhoto(frame, "A cinematic slow motion golf swing");
+        setIsProcessingAI(false);
+
+        if (result) setGeneratedMediaUrl(result);
     };
 
     return (
@@ -506,16 +552,37 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
 
              {/* Player Area */}
              <div className="flex-1 relative bg-black flex items-center justify-center">
-                <ProVideoPlayer 
-                    src={swing.videoUrl || "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"} // Fallback for dev
-                    isPlaying={isPlaying} 
-                    playbackRate={playbackRate}
-                    activeTool={activeTool}
-                    annotations={annotations}
-                    onTogglePlay={() => setIsPlaying(!isPlaying)}
-                    onAddAnnotation={handleAddAnnotation}
-                    videoRef={videoRef}
-                />
+                {isProcessingAI ? (
+                    <div className="flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <Text>Generating with Gemini...</Text>
+                    </div>
+                ) : generatedMediaUrl ? (
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        {generatedMediaUrl.startsWith('data:image') ? (
+                            <img src={generatedMediaUrl} className="max-h-full max-w-full" />
+                        ) : (
+                            <video src={generatedMediaUrl} controls autoPlay className="max-h-full max-w-full" />
+                        )}
+                        <button 
+                            onClick={() => setGeneratedMediaUrl(null)} 
+                            className="absolute top-4 right-4 bg-black/60 p-2 rounded-full text-white hover:bg-black/80"
+                        >
+                            <span className="text-xl">×</span>
+                        </button>
+                    </div>
+                ) : (
+                    <ProVideoPlayer 
+                        src={swing.videoUrl || "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
+                        isPlaying={isPlaying} 
+                        playbackRate={playbackRate}
+                        activeTool={activeTool}
+                        annotations={annotations}
+                        onTogglePlay={() => setIsPlaying(!isPlaying)}
+                        onAddAnnotation={handleAddAnnotation}
+                        videoRef={videoRef}
+                    />
+                )}
              </div>
 
              {/* Controls */}
@@ -534,10 +601,12 @@ export const AnalysisResult: React.FC<{ analysisId: string; onBack: () => void }
              <AnalysisToolbar 
                 activeTool={activeTool} 
                 onSelectTool={(t) => {
-                    setIsPlaying(false); // Pause when drawing
+                    setIsPlaying(false);
                     setActiveTool(t);
                 }} 
                 onClear={() => setAnnotations([])}
+                onMagicEdit={handleMagicEdit}
+                onAnimate={handleAnimate}
             />
         </div>
     );
@@ -548,6 +617,7 @@ export const AnalyzeView: React.FC<{
     onSelectSwing: (id: string) => void;
     onUpload: () => void;
 }> = ({ onRecord, onSelectSwing, onUpload }) => {
+    // ... (Keep existing implementation of AnalyzeView)
     const [isCapturing, setIsCapturing] = useState(false);
     const [filter, setFilter] = useState('ALL');
     const swings = db.getSwings();
@@ -555,14 +625,12 @@ export const AnalyzeView: React.FC<{
     const handleNewCapture = () => setIsCapturing(true);
 
     const handleCaptureComplete = (videoUrl: string, thumbUrl: string) => {
-        // In a real app, this would upload to server.
-        // Mock creating a new swing entry
         const newSwing: SwingAnalysis = {
             id: crypto.randomUUID(),
             date: new Date(),
             videoUrl: videoUrl,
             thumbnailUrl: thumbUrl,
-            clubUsed: 'DRIVER', // Default, user would select
+            clubUsed: 'DRIVER',
             tags: ['New Import'],
             metrics: {},
             feedback: [],
@@ -589,17 +657,15 @@ export const AnalyzeView: React.FC<{
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-32">
-            {/* Header */}
             <div className="px-1 pt-6 bg-white sticky top-0 z-10 pb-4 shadow-sm">
                 <div className="flex justify-between items-end mb-4 px-4">
                     <div>
                         <Text variant="caption" className="uppercase font-bold tracking-widest text-orange-500 mb-1">Analysis</Text>
                         <Text variant="h1" className="mb-0">Swing Library</Text>
                     </div>
-                    <Button size="sm" variant="primary" icon={<Icons.Camera />} onClick={handleNewCapture}>+ New</Button>
+                    <Button size="sm" variant="primary" icon={<Icons.Pause />} onClick={handleNewCapture}>+ New</Button>
                 </div>
 
-                {/* Filters */}
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4">
                     {['ALL', 'DRIVER', 'IRONS', 'WEDGES'].map(f => (
                          <button 
@@ -617,16 +683,14 @@ export const AnalyzeView: React.FC<{
                 </div>
             </div>
 
-            {/* Grid */}
             <div className="px-4">
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Record New Card */}
                     <div 
                         className="aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 cursor-pointer transition-all active:scale-95 bg-gray-50/50 group"
                         onClick={handleNewCapture}
                     >
                         <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 text-gray-600 group-hover:scale-110 transition-transform">
-                            <Icons.Camera />
+                            <Icons.Pause />
                         </div>
                         <span className="text-sm font-bold text-gray-600">Analyze New</span>
                     </div>
@@ -661,4 +725,4 @@ export const AnalyzeView: React.FC<{
     );
 };
 
-export const VideoRecorder = MediaCaptureWizard; // Alias for compatibility
+export const VideoRecorder = MediaCaptureWizard;

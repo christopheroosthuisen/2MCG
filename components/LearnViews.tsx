@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { Course, CourseCategoryType, CourseLesson } from '../types';
 import { COLORS, MOCK_LEARNING_PATHS } from '../constants';
-import { Text, Card, Badge, ProgressBar, Button, Tabs, ScreenHeader } from './UIComponents';
+import { Text, Card, Badge, ProgressBar, Button, Tabs, ScreenHeader, Input } from './UIComponents';
 import { db } from '../services/dataService';
+import { generateConceptImage } from '../services/geminiService';
 
 const Icons = {
     Play: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
@@ -13,7 +14,8 @@ const Icons = {
     Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
     FileText: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
     Grid: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
-    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    Activity: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+    Image: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
 };
 
 type ViewState = 'DASHBOARD' | 'COURSE_DETAIL' | 'LESSON_PLAYER';
@@ -58,6 +60,9 @@ export const LearnSystem: React.FC = () => {
 
 const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = ({ onSelectCourse }) => {
     const [categoryFilter, setCategoryFilter] = useState<CourseCategoryType | 'ALL'>('ALL');
+    const [visPrompt, setVisPrompt] = useState('');
+    const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
     
     // Use DB courses instead of Mock constant to ensure progress tracking works
     const courses = db.getCourses();
@@ -69,6 +74,14 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
     // Filter for Quant courses for specific section
     const quantCourses = courses.filter(c => c.category === 'QUANT_ANALYSIS');
 
+    const handleVisualize = async () => {
+        if (!visPrompt.trim()) return;
+        setIsGenerating(true);
+        const img = await generateConceptImage(visPrompt);
+        setGeneratedImage(img);
+        setIsGenerating(false);
+    };
+
     return (
         <div className="space-y-8 pb-32 animate-in fade-in duration-500 bg-[#F5F5F7]">
             {/* Header */}
@@ -77,6 +90,36 @@ const LearnDashboard: React.FC<{ onSelectCourse: (course: Course) => void }> = (
                 subtitle="Education" 
                 rightAction={<div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden"><img src={db.getUser().avatarUrl} className="w-full h-full object-cover" /></div>}
             />
+
+            {/* AI Visualizer */}
+            <section className="px-4">
+                <Card variant="filled" className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-20"><Icons.Image /></div>
+                    <div className="relative z-10">
+                        <Text variant="h3" color="white" className="mb-2">Visualize It</Text>
+                        <Text className="text-purple-200 text-sm mb-4">Describe a drill or scenario, and AI will generate it for you.</Text>
+                        
+                        {generatedImage ? (
+                            <div className="rounded-xl overflow-hidden mb-4 border border-white/20 relative group">
+                                <img src={generatedImage} className="w-full h-auto" />
+                                <button onClick={() => setGeneratedImage(null)} className="absolute top-2 right-2 bg-black/60 p-1 rounded-full text-white">✕</button>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2">
+                                <input 
+                                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white placeholder:text-purple-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    placeholder="e.g. A golfer hitting out of a bunker"
+                                    value={visPrompt}
+                                    onChange={(e) => setVisPrompt(e.target.value)}
+                                />
+                                <Button size="sm" onClick={handleVisualize} disabled={isGenerating} className="bg-white text-purple-900 hover:bg-purple-100 border-none min-w-[80px]">
+                                    {isGenerating ? '...' : 'Create'}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            </section>
 
             {/* Paths of Mastery */}
             <section className="px-4">

@@ -19,7 +19,7 @@ import { RoundReplayHub } from './components/RoundReplayView';
 import { Onboarding } from './components/Onboarding';
 import { NotificationsView } from './components/NotificationsView';
 import { SubscriptionView } from './components/SubscriptionView'; 
-import { askAICaddie } from './services/geminiService';
+import { askAICaddie, connectLiveCoach } from './services/geminiService';
 import { db } from './services/dataService';
 import { MOCK_NOTIFICATIONS } from './constants';
 
@@ -34,10 +34,12 @@ const Icons = {
     Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     Bell: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
     Coin: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>,
-    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    Activity: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>,
+    Mic: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>,
+    MicOff: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
 };
 
-// Helper for relative time
+// ... (Helper functions match previous)
 function timeAgo(date: Date) {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
@@ -53,7 +55,6 @@ function timeAgo(date: Date) {
     return Math.floor(seconds) + "s ago";
 }
 
-// Get dynamic greeting
 function getGreeting(name: string) {
     const hour = new Date().getHours();
     if (hour < 12) return `Good morning, ${name}`;
@@ -93,6 +94,10 @@ const App: React.FC = () => {
     const [messages, setMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
     const [input, setInput] = useState('');
     const [loadingChat, setLoadingChat] = useState(false);
+    
+    // Live API State
+    const [isLiveActive, setIsLiveActive] = useState(false);
+    const [liveSession, setLiveSession] = useState<any>(null);
 
     const handleSendChat = async () => {
         if (!input.trim()) return;
@@ -104,6 +109,24 @@ const App: React.FC = () => {
         const response = await askAICaddie(input, messages);
         setMessages(prev => [...prev, { role: 'model', text: response }]);
         setLoadingChat(false);
+    };
+
+    const toggleLiveMode = async () => {
+        if (isLiveActive) {
+            if (liveSession) {
+                liveSession.disconnect();
+                setLiveSession(null);
+            }
+            setIsLiveActive(false);
+            setMessages(prev => [...prev, { role: 'model', text: "Live session ended." }]);
+        } else {
+            setIsLiveActive(true);
+            const session = await connectLiveCoach((text) => {
+                // Optional: Update UI with status messages from live coach
+                // setMessages(prev => [...prev, { role: 'model', text: `[Live]: ${text}` }]);
+            });
+            setLiveSession(session);
+        }
     };
 
     const navigateTo = (tab: Tab) => {
@@ -349,8 +372,9 @@ const App: React.FC = () => {
                             </div>
                             <button onClick={() => setIsChatOpen(false)} className="p-2 text-gray-500 bg-white rounded-full shadow-sm border border-gray-200 hover:bg-gray-50"><Icons.Close /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                            {messages.length === 0 && (
+                        
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
+                            {messages.length === 0 && !isLiveActive && (
                                 <div className="text-center text-gray-400 mt-20">
                                     <p className="mb-4">Ask me about course rules, local weather, or strategy.</p>
                                     <div className="flex flex-wrap justify-center gap-2">
@@ -359,6 +383,18 @@ const App: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+                            
+                            {isLiveActive && (
+                                <div className="absolute inset-0 bg-gray-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white z-10 p-6 text-center">
+                                    <div className="w-24 h-24 rounded-full bg-orange-500 animate-pulse flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(249,115,22,0.5)]">
+                                        <Icons.Mic />
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">Live Coach Active</h3>
+                                    <p className="text-gray-400">Listening... Speak naturally to your coach.</p>
+                                    <Button variant="outline" className="mt-8 border-white/20 text-white hover:bg-white/10" onClick={toggleLiveMode}>End Session</Button>
+                                </div>
+                            )}
+
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'}`}>
@@ -368,15 +404,23 @@ const App: React.FC = () => {
                             ))}
                             {loadingChat && <div className="text-xs text-gray-400 ml-4 animate-pulse">Thinking...</div>}
                         </div>
+                        
                         <div className="p-4 border-t border-gray-100 safe-area-bottom bg-white">
                             <div className="flex gap-2">
+                                <button 
+                                    onClick={toggleLiveMode}
+                                    className={`p-3 rounded-xl transition-colors ${isLiveActive ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    {isLiveActive ? <Icons.MicOff /> : <Icons.Mic />}
+                                </button>
                                 <Input 
                                     value={input} 
                                     onChange={(e) => setInput(e.target.value)} 
                                     placeholder="Ask your caddie..." 
                                     onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                                    disabled={isLiveActive}
                                 />
-                                <Button onClick={handleSendChat} disabled={loadingChat} className="px-3"><Icons.Send /></Button>
+                                <Button onClick={handleSendChat} disabled={loadingChat || isLiveActive} className="px-3"><Icons.Send /></Button>
                             </div>
                         </div>
                     </div>
