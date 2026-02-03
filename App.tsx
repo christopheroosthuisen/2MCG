@@ -273,6 +273,17 @@ const App: React.FC = () => {
                     </div>
                 )}
 
+                {/* AI Assistant FAB */}
+                {!isLiveActive && !isChatOpen && (
+                    <button
+                        onClick={() => setIsChatOpen(true)}
+                        className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-40 w-14 h-14 bg-orange-600 rounded-full shadow-lg shadow-orange-600/30 flex items-center justify-center text-white hover:scale-105 hover:bg-orange-500 transition-all active:scale-95 animate-in zoom-in duration-300"
+                        title="Chat with AI Coach"
+                    >
+                        <Icons.Message />
+                    </button>
+                )}
+
                 {/* Chat Interface Overlay */}
                 {isChatOpen && (
                     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end">
@@ -282,6 +293,14 @@ const App: React.FC = () => {
                                 <button onClick={() => setIsChatOpen(false)}><Icons.Close /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                {messages.length === 0 && (
+                                    <div className="text-center text-gray-400 text-sm mt-8">
+                                        <div className="text-4xl mb-2">⛳</div>
+                                        <p>Ask me anything about golf!</p>
+                                        <p className="text-xs mt-2">"How do I fix a slice?"</p>
+                                        <p className="text-xs">"What's a good drill for putting?"</p>
+                                    </div>
+                                )}
                                 {messages.map((msg, i) => (
                                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
